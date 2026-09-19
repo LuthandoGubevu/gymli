@@ -18,17 +18,17 @@ export function BottomNav() {
 
   const navItems = [
     { href: '/app', label: 'Home', icon: Home, disabled: false },
-    { 
-      href: hasPrimaryGym ? `/app/classes/${user.primaryGym}` : '/app/classes', 
-      label: 'Classes', 
+    {
+      href: hasPrimaryGym ? `/app/classes/${user.primaryGym}` : '/app/classes',
+      label: 'Classes',
       icon: CalendarDays,
-      disabled: !hasPrimaryGym
+      disabled: false
     },
-    { 
-      href: hasPrimaryGym ? `/app/trainers/${user.primaryGym}` : '/app/trainers', 
-      label: 'Trainers', 
+    {
+      href: hasPrimaryGym ? `/app/trainers/${user.primaryGym}` : '/app/trainers',
+      label: 'Trainers',
       icon: Users,
-      disabled: !hasPrimaryGym
+      disabled: false
     },
     { 
       href: hasPrimaryGym ? `/app/chat/${user.primaryGym}` : '/app/chat', 

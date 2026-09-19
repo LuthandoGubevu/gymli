@@ -44,19 +44,19 @@ export function SidebarNav() {
   const userMenuItems = [
     { href: "/app", label: "Dashboard", icon: LayoutDashboard, disabled: false },
     { href: "/app/profile", label: "Profile", icon: User, disabled: false },
-    { 
-      href: hasPrimaryGym ? `/app/classes/${user.primaryGym}` : "/app/classes", 
-      label: "Classes", 
+    {
+      href: hasPrimaryGym ? `/app/classes/${user.primaryGym}` : "/app/classes",
+      label: "Classes",
       icon: CalendarDays,
-      disabled: !hasPrimaryGym,
-      tooltip: !hasPrimaryGym ? "Set your primary gym in Profile" : "View Classes"
+      disabled: false,
+      tooltip: "View Classes"
     },
-    { 
-      href: hasPrimaryGym ? `/app/trainers/${user.primaryGym}` : "/app/trainers", 
-      label: "Trainers", 
+    {
+      href: hasPrimaryGym ? `/app/trainers/${user.primaryGym}` : "/app/trainers",
+      label: "Trainers",
       icon: Users,
-      disabled: !hasPrimaryGym,
-      tooltip: !hasPrimaryGym ? "Set your primary gym in Profile" : "View Trainers"
+      disabled: false,
+      tooltip: "View Trainers"
     },
     { 
       href: hasPrimaryGym ? `/app/chat/${user.primaryGym}` : "/app/chat", 
