@@ -14,49 +14,30 @@ export function BottomNav() {
     return null;
   }
 
-  const hasPrimaryGym = !!user.primaryGym;
-
   const navItems = [
-    { href: '/app', label: 'Home', icon: Home, disabled: false },
-    {
-      href: hasPrimaryGym ? `/app/classes/${user.primaryGym}` : '/app/classes',
-      label: 'Classes',
-      icon: CalendarDays,
-      disabled: false
-    },
-    {
-      href: hasPrimaryGym ? `/app/trainers/${user.primaryGym}` : '/app/trainers',
-      label: 'Trainers',
-      icon: Users,
-      disabled: false
-    },
-    { 
-      href: hasPrimaryGym ? `/app/chat/${user.primaryGym}` : '/app/chat', 
-      label: 'Chat', 
-      icon: MessageSquare,
-      disabled: !hasPrimaryGym
-    },
-    { href: '/app/profile', label: 'Profile', icon: UserIcon, disabled: false },
+    { href: '/app', label: 'Home', icon: Home },
+    { href: '/app/classes', label: 'Classes', icon: CalendarDays },
+    { href: '/app/trainers', label: 'Trainers', icon: Users },
+    { href: '/app/chat', label: 'Chat', icon: MessageSquare },
+    { href: '/app/profile', label: 'Profile', icon: UserIcon },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/20 bg-background/90 backdrop-blur-sm md:hidden">
       <div className="flex h-16 items-center justify-around">
         {navItems.map((item) => {
-          const isActive = item.href === '/app' 
+          const isActive = item.href === '/app'
             ? pathname === item.href
             : pathname.startsWith(item.href);
-            
+
           return (
             <Link
               key={item.label}
-              href={item.disabled ? '#' : item.href}
+              href={item.href}
               className={cn(
                 'flex flex-col items-center justify-center gap-1 p-2 text-sm font-medium transition-colors',
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
-                item.disabled && 'pointer-events-none opacity-50'
               )}
-              aria-disabled={item.disabled}
               aria-label={item.label}
             >
               <item.icon className="size-6" />

@@ -39,44 +39,23 @@ export function SidebarNav() {
     }
   };
 
-  const hasPrimaryGym = !!user?.primaryGym;
-
   const userMenuItems = [
-    { href: "/app", label: "Dashboard", icon: LayoutDashboard, disabled: false },
-    { href: "/app/profile", label: "Profile", icon: User, disabled: false },
-    {
-      href: hasPrimaryGym ? `/app/classes/${user.primaryGym}` : "/app/classes",
-      label: "Classes",
-      icon: CalendarDays,
-      disabled: false,
-      tooltip: "View Classes"
-    },
-    {
-      href: hasPrimaryGym ? `/app/trainers/${user.primaryGym}` : "/app/trainers",
-      label: "Trainers",
-      icon: Users,
-      disabled: false,
-      tooltip: "View Trainers"
-    },
-    { 
-      href: hasPrimaryGym ? `/app/chat/${user.primaryGym}` : "/app/chat", 
-      label: "Gym Chat", 
-      icon: MessageSquare,
-      disabled: !hasPrimaryGym,
-      tooltip: !hasPrimaryGym ? "Set your primary gym in Profile" : "Join Gym Chat"
-    },
+    { href: "/app", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/app/profile", label: "Profile", icon: User },
+    { href: "/app/classes", label: "Classes", icon: CalendarDays, tooltip: "View Classes" },
+    { href: "/app/trainers", label: "Trainers", icon: Users, tooltip: "View Trainers" },
+    { href: "/app/chat", label: "Gym Chat", icon: MessageSquare, tooltip: "Join Gym Chat" },
   ];
 
   const adminMenuItems = [
-    { 
-        href: "/app/admin", 
-        label: "Admin Panel", 
-        icon: Shield, 
-        disabled: false,
-        notificationCount: totalPending 
+    {
+        href: "/app/admin",
+        label: "Admin Panel",
+        icon: Shield,
+        notificationCount: totalPending
     }
   ];
-  
+
   const menuItems = user?.role === 'admin' ? adminMenuItems : userMenuItems;
 
   return (
@@ -84,7 +63,7 @@ export function SidebarNav() {
       <SidebarHeader>
         <div className="flex items-center gap-2 p-2">
             <Dumbbell className="size-8 text-primary" />
-            <span className="text-xl font-bold group-data-[collapsible=icon]:hidden">MetroGym</span>
+            <span className="text-xl font-bold group-data-[collapsible=icon]:hidden">Gymli</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -92,11 +71,9 @@ export function SidebarNav() {
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
               <SidebarMenuButton
-                isActive={!item.disabled && (item.href === '/app/admin' ? pathname === item.href : pathname.startsWith(item.href))}
-                onClick={() => !item.disabled && router.push(item.href)}
+                isActive={item.href === '/app/admin' ? pathname === item.href : pathname.startsWith(item.href)}
+                onClick={() => router.push(item.href)}
                 tooltip={(item as any).tooltip || item.label}
-                disabled={item.disabled}
-                aria-disabled={item.disabled}
               >
                   <item.icon />
                   <span>{item.label}</span>

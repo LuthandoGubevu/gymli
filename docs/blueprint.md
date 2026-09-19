@@ -1,4 +1,4 @@
-# **App Name**: MetroGym Rebuild
+# **App Name**: Gymli
 
 ## Core Features:
 
@@ -6,10 +6,11 @@
 - Protected Routes: Protected routes using Next.js App Router + middleware or layouts
 - Firestore Integration: Firestore integration: examples for creating, reading, updating user profiles
 - Role Separation: Admin / user separation in app structure
+- Single Branch: One fixed gym location, no multi-location/chain support
 
 ## Style Guidelines:
 
-- Primary: #FACC15 (MetroGym Gold / Yellow)
+- Primary: #FACC15 (Gymli Gold / Yellow)
 - Accent: #EAB308 (Deeper Gold)
 - Foreground: #F9FAFB (Light text on dark)
 - Background: #0F172A (Dark blue-gray)

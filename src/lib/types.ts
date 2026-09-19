@@ -3,8 +3,8 @@ import type { Timestamp } from 'firebase/firestore';
 import * as z from 'zod';
 
 // For Classes
-export type ClassName = 
-  | 'Spinning' | 'Step' | 'Body Con' | 'Box' | 'HIIT' | 'Small Group PT' 
+export type ClassName =
+  | 'Spinning' | 'Step' | 'Body Con' | 'Box' | 'HIIT' | 'Small Group PT'
   | 'Spinn' | 'Instructor Decides' | 'Only for the Brave' | '';
 export type Day = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
 export type TimeSlot = string;
@@ -27,14 +27,14 @@ export interface Trainer {
     avatarUrl: string;
 }
 
-// For Gym Management Form
-export const manageGymsFormSchema = z.object({
+// For the Gym Settings Form (single fixed gym/branch)
+export const gymSettingsFormSchema = z.object({
   gymName: z.string().min(3, { message: "Gym name must be at least 3 characters." }),
   address: z.string().min(10, { message: "Address seems too short." }),
   imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   latitude: z.coerce.number().min(-90).max(90),
   longitude: z.coerce.number().min(-180).max(180),
-  crowdCount: z.coerce.number().int().nonnegative().optional(),
+  geofenceRadiusMeters: z.coerce.number().int().positive().default(100),
   waitTime: z.string().optional(),
   thresholdLow: z.coerce.number().int().nonnegative(),
   thresholdModerate: z.coerce.number().int().nonnegative(),
@@ -45,22 +45,17 @@ export const manageGymsFormSchema = z.object({
   generalGymNotice: z.string().optional(),
   offerExpiryDate: z.date().optional(),
 });
-export type GymFormData = z.infer<typeof manageGymsFormSchema>;
+export type GymSettingsFormData = z.infer<typeof gymSettingsFormSchema>;
 
-// The main Gym interface, combining all data
-export interface Gym extends GymFormData {
-  id: string;
-  createdAt: Timestamp;
-  offerExpiryDate?: Timestamp;
-  classSchedule: ClassInfo[];
-  trainers: Trainer[];
+// The single fixed gym's profile doc (config/gym)
+export interface GymProfile extends Omit<GymSettingsFormData, 'offerExpiryDate'> {
+  offerExpiryDate?: Timestamp | null;
+  updatedAt?: Timestamp;
 }
 
 // For User Presence
 export interface UserPresence {
-  id?: string;
   userId: string;
-  gymId: string;
   isActive: boolean;
   lastSeen: Timestamp;
 }

@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
-import { useGyms } from "@/hooks/use-gyms";
+import { useGym } from "@/hooks/use-gym";
 import { updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
@@ -32,7 +32,6 @@ const profileFormSchema = z.object({
   lastName: z.string().min(2, { message: "Last name must be at least 2 characters." }),
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email(),
-  primaryGym: z.string().optional(),
   fitnessGoals: z.string().max(200, { message: "Goals can be up to 200 characters." }).optional(),
 });
 
@@ -42,7 +41,7 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
-  const { gyms } = useGyms();
+  const { gym } = useGym();
 
   const form = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
@@ -51,16 +50,9 @@ export default function ProfilePage() {
       lastName: "",
       username: "",
       email: "",
-      primaryGym: "",
       fitnessGoals: "",
     },
   });
-
-  const primaryGymName = useMemo(() => {
-    const gymId = form.watch("primaryGym");
-    if (!gymId) return "Not Set";
-    return gyms.find(loc => loc.id === gymId)?.gymName || "Unknown Gym";
-  }, [form, gyms]);
 
   useEffect(() => {
     if (user) {
@@ -79,7 +71,6 @@ export default function ProfilePage() {
             lastName: userData.lastName || "",
             username: userData.username || "",
             email: userData.email || user.email || "",
-            primaryGym: userData.primaryGym || "",
             fitnessGoals: userData.fitnessGoals || "",
           });
         }
@@ -202,9 +193,9 @@ export default function ProfilePage() {
                   )}
                 />
                 <FormItem>
-                  <FormLabel>Primary Gym</FormLabel>
+                  <FormLabel>Gym</FormLabel>
                   <FormControl>
-                    <Input disabled value={`MetroGym ${primaryGymName}`} />
+                    <Input disabled value={gym?.gymName || "Gymli"} />
                   </FormControl>
                 </FormItem>
                 <FormField

@@ -2,51 +2,73 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuth() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-    
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
+
+    // USERS
+    // Users can read/update their own profile, but never change their own role
+    // or membership status via a client write. Admins can read/manage any profile.
     match /users/{userId} {
-      allow read, update: if isOwner(userId) || isAdmin();
-      allow create: if request.auth != null;
-      allow list: if isAdmin();
+      allow read: if isUser(userId) || isAdmin();
+      allow update: if isAdmin() || (
+        isUser(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'membershipStatus', 'memberNumber'])
+      );
+      allow list, create, delete: if isAdmin();
     }
-    
-    match /gyms/{gymId} {
+
+    // GYM (single fixed branch)
+    match /config/{docId} {
       allow read: if true;
-      allow list: if true;
-      allow create, update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
-    
+
+    // CLASSES & TRAINERS
+    match /classes/{classId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /trainers/{trainerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // USER PRESENCE
+    // Users update their own presence doc. Any authenticated user can list
+    // presence docs to compute the live occupancy count.
+    match /userPresence/{userId} {
+      allow read, list: if isAuth();
+      allow write: if isUser(userId);
+    }
+
+    // BOOKINGS (CLASSES & TRAINERS)
     match /classBookings/{bookingId} {
-      allow read, create: if request.auth != null;
-      allow update, delete: if isAdmin();
-      allow list: if isAdmin();
+      allow create: if isAuth();
+      allow read, update: if (isAuth() && request.auth.uid == resource.data.userId) || isAdmin();
+      allow list, delete: if isAdmin();
     }
 
     match /trainerBookings/{bookingId} {
-      allow read, create: if request.auth != null;
-      allow update, delete: if isAdmin();
-      allow list: if isAdmin();
-    }
-    
-    match /chats/{locationId}/{message=**} {
-       allow read, write: if request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.primaryGym == locationId || isAdmin());
+      allow create: if isAuth();
+      allow read, update: if (isAuth() && request.auth.uid == resource.data.userId) || isAdmin();
+      allow list, delete: if isAdmin();
     }
 
-    match /userPresence/{userId} {
-      // Admins can see all presence data for dashboards. Users can see their own.
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
-      // A user can create or update their own presence document.
-      allow create, update: if isOwner(userId);
-      // Nobody can delete presence documents.
-      allow delete: if false;
+    // GROUP CHAT (single fixed branch)
+    match /chatMessages/{messageId} {
+      allow read, list, create: if isAuth();
+      allow delete: if isAdmin();
     }
   }
 }

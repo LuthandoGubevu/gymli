@@ -10,7 +10,6 @@ import * as z from "zod";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { useGyms } from "@/hooks/use-gyms";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +24,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -36,7 +34,6 @@ const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string(),
-  primaryGym: z.string({ required_error: "Please select a primary gym." }),
   terms: z.boolean().default(false).refine(val => val === true, {
     message: "You must accept the terms and conditions.",
   }),
@@ -49,7 +46,6 @@ export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { gyms, isLoading: gymsLoading } = useGyms();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -85,7 +81,6 @@ export default function SignupPage() {
         lastName: values.lastName,
         username: values.username,
         email: values.email,
-        primaryGym: values.primaryGym,
         role: isAdmin ? "admin" : "user",
         createdAt: serverTimestamp(),
       });
@@ -113,7 +108,7 @@ export default function SignupPage() {
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-bold">Create an Account</CardTitle>
-        <CardDescription>Join MetroGym to start your fitness journey.</CardDescription>
+        <CardDescription>Join Gymli to start your fitness journey.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -234,30 +229,6 @@ export default function SignupPage() {
                       </Button>
                     </div>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="primaryGym"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Primary Gym</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={gymsLoading}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={gymsLoading ? "Loading gyms..." : "Select your home gym location"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {gyms.map(gym => (
-                        <SelectItem key={gym.id} value={gym.id}>
-                          {gym.gymName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

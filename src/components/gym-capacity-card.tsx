@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export function GymCapacityCard() {
   const { user } = useAuth();
-  const { occupancy, isLoading } = useGymOccupancy(user?.primaryGym ?? null);
+  const { occupancy, isLoading } = useGymOccupancy();
   const { manualCheckIn, isCheckingIn } = usePresence();
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
@@ -62,10 +62,10 @@ export function GymCapacityCard() {
                 <p className="text-base text-muted-foreground self-end pb-1">members</p>
             </div>
             <p className="mt-4 text-xs italic text-muted-foreground text-center">
-                {user?.primaryGym ? "Live count at your primary gym." : "Set your primary gym to see live data."}
+                Live count at the gym.
             </p>
         </CardContent>
-        {user && user.primaryGym && (
+        {user && (
             <CardFooter className="flex flex-col items-center gap-4">
               {!isAutoPresenceEnabled && (
                 <Button className="w-full" onClick={manualCheckIn} disabled={isCheckingIn}>
