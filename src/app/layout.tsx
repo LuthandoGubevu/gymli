@@ -4,11 +4,11 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/components/auth-provider';
 import { BackgroundWrapper } from '@/components/background-wrapper';
-import { GymsProvider } from '@/components/gyms-provider';
+import { GymProvider } from '@/components/gym-provider';
 import { PresenceProvider } from '@/components/presence-provider';
 
 export const metadata: Metadata = {
-  title: 'MetroGym Rebuild',
+  title: 'Gymli',
   description: 'Next-generation fitness platform',
   manifest: '/manifest.json',
 };
@@ -32,12 +32,12 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <BackgroundWrapper>
             <AuthProvider>
-              <GymsProvider>
+              <GymProvider>
                 <PresenceProvider>
                   {children}
                   <Toaster />
                 </PresenceProvider>
-              </GymsProvider>
+              </GymProvider>
             </AuthProvider>
         </BackgroundWrapper>
       </body>

@@ -1,6 +1,6 @@
 {
-  "name": "MetroGym App",
-  "short_name": "MetroGym",
+  "name": "Gymli",
+  "short_name": "Gymli",
   "description": "Next-generation fitness platform",
   "start_url": "/",
   "display": "standalone",

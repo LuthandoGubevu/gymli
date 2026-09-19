@@ -38,7 +38,7 @@ export default function AppLayout({
                 <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-white/20 bg-background/80 px-4 backdrop-blur-sm md:bg-sidebar/80">
                     <div className="flex items-center gap-2">
                         <SidebarTrigger className="md:hidden" />
-                        <h1 className="text-xl font-semibold md:hidden">MetroGym</h1>
+                        <h1 className="text-xl font-semibold md:hidden">Gymli</h1>
                     </div>
                 </header>
                 <main className="flex-1 p-4 pb-20 md:p-6 lg:p-8">

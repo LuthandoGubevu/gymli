@@ -2,116 +2,101 @@
 "use client";
 
 import React, { createContext, useState, useEffect, useCallback, useContext, ReactNode } from 'react';
-import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { useGyms } from '@/hooks/use-gyms';
+import { useGym } from '@/hooks/use-gym';
 import { getDistance } from '@/lib/geolocation';
 import { useToast } from '@/hooks/use-toast';
-
-const GYM_PROXIMITY_METERS = 100; // Increased radius for better detection
+import { DEFAULT_GEOFENCE_METERS } from '@/lib/gym';
 
 interface PresenceContextType {
   isCheckingIn: boolean;
   manualCheckIn: () => Promise<void>;
   checkOut: () => Promise<void>;
-  currentGymId: string | null;
+  isCheckedIn: boolean;
 }
 
 const PresenceContext = createContext<PresenceContextType>({
   isCheckingIn: false,
   manualCheckIn: async () => {},
   checkOut: async () => {},
-  currentGymId: null,
+  isCheckedIn: false,
 });
 
 export const usePresence = () => useContext(PresenceContext);
 
 export const PresenceProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const { gyms } = useGyms();
+  const { gym } = useGym();
   const { toast } = useToast();
   const [isCheckingIn, setIsCheckingIn] = useState(false);
-  const [currentGymId, setCurrentGymId] = useState<string | null>(null);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
 
-  const updatePresence = useCallback(async (gymId: string | null) => {
+  const updatePresence = useCallback(async (isActive: boolean) => {
     if (!user) return;
-    
+
     const presenceRef = doc(db, 'userPresence', user.uid);
     try {
-      if (gymId) {
+      if (isActive) {
         await setDoc(presenceRef, {
           userId: user.uid,
-          gymId: gymId,
           isActive: true,
           lastSeen: serverTimestamp(),
         }, { merge: true });
-        setCurrentGymId(gymId);
       } else {
         await setDoc(presenceRef, { isActive: false }, { merge: true });
-        setCurrentGymId(null);
       }
+      setIsCheckedIn(isActive);
     } catch (error) {
-        console.error("Failed to update presence:", error);
+      console.error("Failed to update presence:", error);
     }
   }, [user]);
 
-  const findNearbyGym = useCallback((coords: GeolocationCoordinates): string | null => {
-    if (!gyms || gyms.length === 0) return null;
-
-    let closestGym: { id: string; distance: number } | null = null;
-
-    for (const gym of gyms) {
-      if (gym.latitude && gym.longitude) {
-        const distance = getDistance(coords.latitude, coords.longitude, gym.latitude, gym.longitude);
-        if (distance <= GYM_PROXIMITY_METERS) {
-          if (!closestGym || distance < closestGym.distance) {
-            closestGym = { id: gym.id, distance };
-          }
-        }
-      }
-    }
-    return closestGym?.id ?? null;
-  }, [gyms]);
+  const isAtGym = useCallback((coords: GeolocationCoordinates): boolean => {
+    if (!gym?.latitude || !gym?.longitude) return false;
+    const distance = getDistance(coords.latitude, coords.longitude, gym.latitude, gym.longitude);
+    return distance <= (gym.geofenceRadiusMeters ?? DEFAULT_GEOFENCE_METERS);
+  }, [gym]);
 
   // Automatic presence update logic
   useEffect(() => {
     if (!user || !user.autoPresenceEnabled || !navigator.geolocation) {
       // If user logs out or disables auto-presence, ensure they are checked out
-      if (currentGymId) {
-        updatePresence(null);
+      if (isCheckedIn) {
+        updatePresence(false);
       }
       return;
     }
 
     const handleSuccess = (position: GeolocationPosition) => {
-      const nearbyGymId = findNearbyGym(position.coords);
+      const nearby = isAtGym(position.coords);
       // Only update if the status changes to avoid unnecessary writes
-      if (nearbyGymId !== currentGymId) {
-        updatePresence(nearbyGymId);
+      if (nearby !== isCheckedIn) {
+        updatePresence(nearby);
       }
     };
 
     const handleError = (error: GeolocationPositionError) => {
       console.warn(`Geolocation error: ${error.message}`);
       // If there's an error, check the user out to be safe
-      updatePresence(null);
+      updatePresence(false);
     };
 
     // Initial check
     navigator.geolocation.getCurrentPosition(handleSuccess, handleError);
-    
+
     // Watch for changes
     const watcherId = navigator.geolocation.watchPosition(handleSuccess, handleError, {
         enableHighAccuracy: true,
         timeout: 20000,
         maximumAge: 60000,
     });
-    
+
     return () => navigator.geolocation.clearWatch(watcherId);
 
-  }, [user, user?.autoPresenceEnabled, findNearbyGym, updatePresence, currentGymId]);
-  
+  }, [user, user?.autoPresenceEnabled, isAtGym, updatePresence, isCheckedIn]);
+
   const manualCheckIn = useCallback(async () => {
     setIsCheckingIn(true);
     if (!navigator.geolocation) {
@@ -122,13 +107,12 @@ export const PresenceProvider = ({ children }: { children: ReactNode }) => {
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const nearbyGymId = findNearbyGym(position.coords);
-        if (nearbyGymId) {
-          await updatePresence(nearbyGymId);
-          const gymName = gyms.find(g => g.id === nearbyGymId)?.gymName;
-          toast({ title: 'Checked In!', description: `Welcome to MetroGym ${gymName}` });
+        const nearby = isAtGym(position.coords);
+        if (nearby) {
+          await updatePresence(true);
+          toast({ title: 'Checked In!', description: `Welcome to ${gym?.gymName || 'Gymli'}` });
         } else {
-          toast({ variant: 'destructive', title: 'No Gym Nearby', description: `Could not find a gym within ${GYM_PROXIMITY_METERS} meters.` });
+          toast({ variant: 'destructive', title: 'Not Nearby', description: `You need to be within the gym's check-in radius.` });
         }
         setIsCheckingIn(false);
       },
@@ -138,17 +122,17 @@ export const PresenceProvider = ({ children }: { children: ReactNode }) => {
       },
       { enableHighAccuracy: true }
     );
-  }, [findNearbyGym, updatePresence, toast, gyms]);
+  }, [isAtGym, updatePresence, toast, gym]);
 
   const checkOut = useCallback(async () => {
-    await updatePresence(null);
+    await updatePresence(false);
   }, [updatePresence]);
 
   const value = {
     isCheckingIn,
     manualCheckIn,
     checkOut,
-    currentGymId,
+    isCheckedIn,
   };
 
   return <PresenceContext.Provider value={value}>{children}</PresenceContext.Provider>;

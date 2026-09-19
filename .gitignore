@@ -17,6 +17,11 @@
 /.next/
 /out/
 
+# next-pwa generated service worker files
+/public/sw.js
+/public/workbox-*.js
+/public/fallback-*.js
+
 # production
 /build
 
@@ -43,3 +48,5 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+serviceAccountKey.json
+*serviceAccountKey*.json

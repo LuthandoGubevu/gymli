@@ -13,7 +13,6 @@ interface UserProfile extends User {
   firstName?: string;
   lastName?: string;
   username?: string;
-  primaryGym?: string;
   autoPresenceEnabled?: boolean;
 }
 

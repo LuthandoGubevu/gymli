@@ -7,11 +7,10 @@ import { useEffect, useState, useMemo, FormEvent } from "react";
 import { collection, query, onSnapshot, doc, updateDoc, Timestamp, deleteDoc, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { useGyms } from "@/hooks/use-gyms";
 import { AdminDashboardOverview } from "@/components/admin-dashboard-overview";
 import { usePendingBookings } from "@/hooks/use-pending-bookings";
 import { cn } from "@/lib/utils";
-import { ManageGymsForm } from "@/components/manage-gyms-form";
+import { GymSettingsForm } from "@/components/gym-settings-form";
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,8 +41,6 @@ interface ClassBooking {
   userId: string;
   userName: string;
   userEmail: string;
-  gymId: string;
-  gymName: string;
   classId: string;
   className: string;
   classDay: string;
@@ -58,8 +55,6 @@ interface TrainerBooking {
     userId: string;
     userName: string;
     userEmail: string;
-    gymId: string;
-    gymName: string;
     trainerId: string;
     trainerName: string;
     day: string;
@@ -96,11 +91,9 @@ const StatusBadge = ({ status }: { status: BookingStatus }) => (
 function ClassBookingsManager() {
   const [bookings, setBookings] = useState<ClassBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [locationFilter, setLocationFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const { toast } = useToast();
-  const { gyms } = useGyms();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -142,29 +135,19 @@ function ClassBookingsManager() {
   };
 
   const filteredBookings = useMemo(() => {
-    return bookings.filter(booking => 
-      (locationFilter === 'all' || booking.gymId === locationFilter) &&
+    return bookings.filter(booking =>
       (statusFilter === 'all' || booking.status === statusFilter)
     );
-  }, [bookings, locationFilter, statusFilter]);
-  
+  }, [bookings, statusFilter]);
+
   return (
      <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><CalendarCheck/>Class Booking Requests</CardTitle>
-          <CardDescription>View and manage all class booking requests from members across all locations.</CardDescription>
+          <CardDescription>View and manage all class booking requests from members.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
            <div className="flex flex-wrap gap-4">
-            <Select value={locationFilter} onValueChange={setLocationFilter}>
-              <SelectTrigger className="w-full sm:w-[220px]">
-                <SelectValue placeholder="Filter by location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Locations</SelectItem>
-                {gyms.map(loc => <SelectItem key={loc.id} value={loc.id}>{loc.gymName}</SelectItem>)}
-              </SelectContent>
-            </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as BookingStatus | 'all')}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
@@ -183,7 +166,6 @@ function ClassBookingsManager() {
                   <TableRow>
                     <TableHead>Member</TableHead>
                     <TableHead>Class</TableHead>
-                    <TableHead>Location</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -191,7 +173,7 @@ function ClassBookingsManager() {
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={6} className="h-24 text-center">Loading bookings...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading bookings...</TableCell></TableRow>
                   ) : filteredBookings.length > 0 ? (
                     filteredBookings.map(booking => (
                       <TableRow key={booking.id}>
@@ -200,7 +182,6 @@ function ClassBookingsManager() {
                           <div className="text-sm text-muted-foreground">{booking.userEmail}</div>
                         </TableCell>
                         <TableCell>{booking.className}</TableCell>
-                        <TableCell>{booking.gymName}</TableCell>
                         <TableCell>{booking.classDay}, {booking.classTime}</TableCell>
                         <TableCell><StatusBadge status={booking.status} /></TableCell>
                         <TableCell className="text-right">
@@ -218,7 +199,7 @@ function ClassBookingsManager() {
                       </TableRow>
                     ))
                   ) : (
-                    <TableRow><TableCell colSpan={6} className="h-24 text-center">No bookings found for the selected filters.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="h-24 text-center">No bookings found for the selected filters.</TableCell></TableRow>
                   )}
                 </TableBody>
              </Table>
@@ -232,11 +213,9 @@ function ClassBookingsManager() {
 function TrainerBookingsManager() {
     const [bookings, setBookings] = useState<TrainerBooking[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [locationFilter, setLocationFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     const { toast } = useToast();
-    const { gyms } = useGyms();
     const { user } = useAuth();
 
     useEffect(() => {
@@ -278,11 +257,10 @@ function TrainerBookingsManager() {
     };
 
     const filteredBookings = useMemo(() => {
-        return bookings.filter(booking => 
-            (locationFilter === 'all' || booking.gymId === locationFilter) &&
+        return bookings.filter(booking =>
             (statusFilter === 'all' || booking.status === statusFilter)
         );
-    }, [bookings, locationFilter, statusFilter]);
+    }, [bookings, statusFilter]);
 
     return (
         <Card className="shadow-lg">
@@ -292,15 +270,6 @@ function TrainerBookingsManager() {
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-4">
-                    <Select value={locationFilter} onValueChange={setLocationFilter}>
-                        <SelectTrigger className="w-full sm:w-[220px]">
-                            <SelectValue placeholder="Filter by location" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Locations</SelectItem>
-                            {gyms.map(loc => <SelectItem key={loc.id} value={loc.id}>{loc.gymName}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
                     <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as BookingStatus | 'all')}>
                         <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue placeholder="Filter by status" />
@@ -319,7 +288,6 @@ function TrainerBookingsManager() {
                             <TableRow>
                                 <TableHead>Member</TableHead>
                                 <TableHead>Trainer</TableHead>
-                                <TableHead>Location</TableHead>
                                 <TableHead>Date & Time</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -327,7 +295,7 @@ function TrainerBookingsManager() {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={6} className="h-24 text-center">Loading bookings...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading bookings...</TableCell></TableRow>
                             ) : filteredBookings.length > 0 ? (
                                 filteredBookings.map(booking => (
                                     <TableRow key={booking.id}>
@@ -336,7 +304,6 @@ function TrainerBookingsManager() {
                                             <div className="text-sm text-muted-foreground">{booking.userEmail}</div>
                                         </TableCell>
                                         <TableCell>{booking.trainerName}</TableCell>
-                                        <TableCell>{booking.gymName}</TableCell>
                                         <TableCell>{booking.day}, {booking.time}</TableCell>
                                         <TableCell><StatusBadge status={booking.status} /></TableCell>
                                         <TableCell className="text-right">
@@ -354,7 +321,7 @@ function TrainerBookingsManager() {
                                     </TableRow>
                                 ))
                             ) : (
-                                <TableRow><TableCell colSpan={6} className="h-24 text-center">No trainer bookings found.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} className="h-24 text-center">No trainer bookings found.</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>
@@ -366,9 +333,7 @@ function TrainerBookingsManager() {
 
 // Chat Moderation Manager Component
 function ChatModerationManager() {
-    const { gyms, isLoading: gymsLoading } = useGyms();
     const { user } = useAuth();
-    const [selectedLocation, setSelectedLocation] = useState<string>('');
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [announcement, setAnnouncement] = useState("");
@@ -377,26 +342,20 @@ function ChatModerationManager() {
     const [isAlertOpen, setIsAlertOpen] = useState(false);
     const { toast } = useToast();
 
-    useEffect(() => {
-        if (!gymsLoading && gyms.length > 0 && !selectedLocation) {
-            setSelectedLocation(gyms[0].id);
-        }
-    }, [gyms, gymsLoading, selectedLocation]);
-
     const formatTimestamp = (timestamp: Timestamp | null) => {
         if (!timestamp) return 'Sending...';
         return new Date(timestamp.seconds * 1000).toLocaleString();
     };
 
     useEffect(() => {
-        if (!selectedLocation || !user || user.role !== 'admin') {
+        if (!user || user.role !== 'admin') {
             setMessages([]);
             setIsLoading(false);
             return;
         }
 
         setIsLoading(true);
-        const messagesColRef = collection(db, 'chats', selectedLocation, 'messages');
+        const messagesColRef = collection(db, 'chatMessages');
         const q = query(messagesColRef, orderBy('timestamp', 'desc'));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -413,18 +372,18 @@ function ChatModerationManager() {
         });
 
         return () => unsubscribe();
-    }, [selectedLocation, toast, user]);
-    
+    }, [toast, user]);
+
     const handlePostAnnouncement = async (e: FormEvent) => {
         e.preventDefault();
-        if (announcement.trim() === '' || !selectedLocation) return;
+        if (announcement.trim() === '') return;
 
         setIsPosting(true);
-        const messagesColRef = collection(db, 'chats', selectedLocation, 'messages');
+        const messagesColRef = collection(db, 'chatMessages');
         try {
             await addDoc(messagesColRef, {
                 text: announcement,
-                sender: { id: 'admin', name: 'MetroGym Admin' },
+                sender: { id: 'admin', name: 'Gymli Admin' },
                 timestamp: serverTimestamp(),
                 isAnnouncement: true,
             });
@@ -438,10 +397,10 @@ function ChatModerationManager() {
     };
 
     const handleDeleteMessage = async () => {
-        if (!messageToDelete || !selectedLocation) return;
+        if (!messageToDelete) return;
 
         try {
-            await deleteDoc(doc(db, 'chats', selectedLocation, 'messages', messageToDelete.id));
+            await deleteDoc(doc(db, 'chatMessages', messageToDelete.id));
             toast({ title: "Success", description: "Message deleted." });
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "Failed to delete message." });
@@ -460,25 +419,9 @@ function ChatModerationManager() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><MessageSquare/>Group Chat Moderation</CardTitle>
-          <CardDescription>View messages, delete content, and post announcements for a specific gym location.</CardDescription>
+          <CardDescription>View messages, delete content, and post announcements.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                    <label htmlFor="location-filter" className="text-sm font-medium">Select Gym Location</label>
-                    <Select value={selectedLocation} onValueChange={setSelectedLocation} disabled={gymsLoading}>
-                        <SelectTrigger id="location-filter" className="w-full mt-2 sm:w-[220px]">
-                            <SelectValue placeholder={gymsLoading ? "Loading..." : "Select a location"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {gyms.map(loc => (
-                                <SelectItem key={loc.id} value={loc.id}>{loc.gymName}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-
             <form onSubmit={handlePostAnnouncement} className="space-y-2">
                 <label htmlFor="announcement-input" className="text-sm font-medium">Post an Announcement</label>
                 <div className="flex gap-2">
@@ -566,7 +509,7 @@ export default function AdminPage() {
       { id: 'class-bookings', label: 'Classes', icon: CalendarCheck, badge: pendingClassBookings },
       { id: 'trainer-bookings', label: 'Trainers', icon: UserCheck, badge: pendingTrainerBookings },
       { id: 'chat-moderation', label: 'Chat', icon: MessageSquare, badge: 0 },
-      { id: 'manage-gyms', label: 'Gyms', icon: Building2, badge: 0 },
+      { id: 'gym-settings', label: 'Gym', icon: Building2, badge: 0 },
     ];
 
     useEffect(() => {
@@ -614,9 +557,9 @@ export default function AdminPage() {
                     <MessageSquare className="mr-2 size-4"/>
                     Chat Moderation
                 </TabsTrigger>
-                <TabsTrigger value="manage-gyms">
+                <TabsTrigger value="gym-settings">
                     <Building2 className="mr-2 size-4"/>
-                    Manage Gyms
+                    Gym Settings
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="analytics" className="mt-4">
@@ -631,8 +574,8 @@ export default function AdminPage() {
               <TabsContent value="chat-moderation" className="mt-4">
                  <ChatModerationManager />
               </TabsContent>
-              <TabsContent value="manage-gyms" className="mt-4">
-                 <ManageGymsForm />
+              <TabsContent value="gym-settings" className="mt-4">
+                 <GymSettingsForm />
               </TabsContent>
             </Tabs>
 

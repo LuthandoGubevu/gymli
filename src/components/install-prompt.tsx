@@ -70,7 +70,7 @@ export function InstallPrompt() {
     )}>
         <Card className="max-w-md mx-auto shadow-2xl">
             <CardHeader>
-                <CardTitle>Install MetroGym App</CardTitle>
+                <CardTitle>Install Gymli App</CardTitle>
                 <CardDescription>Get a richer experience by installing the app on your device.</CardDescription>
             </CardHeader>
             <CardContent className="flex gap-4">
