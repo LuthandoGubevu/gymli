@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, User, Shield, LogOut, Dumbbell, CalendarDays, Users, MessageSquare } from "lucide-react";
+import { LayoutDashboard, User, Shield, LogOut, Dumbbell, CalendarDays, Users, MessageSquare, QrCode } from "lucide-react";
 import {
   SidebarHeader,
   SidebarContent,
@@ -45,6 +45,7 @@ export function SidebarNav() {
     { href: "/app/classes", label: "Classes", icon: CalendarDays, tooltip: "View Classes" },
     { href: "/app/trainers", label: "Trainers", icon: Users, tooltip: "View Trainers" },
     { href: "/app/chat", label: "Gym Chat", icon: MessageSquare, tooltip: "Join Gym Chat" },
+    { href: "/app/pass", label: "My Pass", icon: QrCode, tooltip: "View My Access Pass" },
   ];
 
   const adminMenuItems = [

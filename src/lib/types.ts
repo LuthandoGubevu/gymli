@@ -58,4 +58,21 @@ export interface UserPresence {
   userId: string;
   isActive: boolean;
   lastSeen: Timestamp;
+  lastCheckInAt?: Timestamp;
 }
+
+// For "busiest times" analytics
+export interface CheckIn {
+  id: string;
+  userId: string;
+  checkInAt: Timestamp;
+  source: 'geo' | 'manual' | 'qr';
+  dayOfWeek: number; // 0 (Sunday) - 6 (Saturday), per Date.getDay()
+  hourOfDay: number; // 0 - 23, per Date.getHours()
+}
+
+// gymStats/hourly doc: keys are "{dayOfWeek}-{hourOfDay}" -> visit count
+export type GymStatsHourly = Record<string, number>;
+
+// For the digital access pass
+export type MembershipStatus = 'active' | 'paused' | 'expired';

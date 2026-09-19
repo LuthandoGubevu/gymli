@@ -45,11 +45,25 @@ service cloud.firestore {
     }
 
     // USER PRESENCE
-    // Users update their own presence doc. Any authenticated user can list
-    // presence docs to compute the live occupancy count.
+    // Users update their own presence doc; admins can also write it (staff-
+    // assisted check-in via the pass scanner). Any authenticated user can
+    // list presence docs to compute the live occupancy count.
     match /userPresence/{userId} {
       allow read, list: if isAuth();
-      allow write: if isUser(userId);
+      allow write: if isUser(userId) || isAdmin();
+    }
+
+    // CHECK-IN LOG & HOURLY ROLLUP (for "busiest times")
+    // Members can only log their own check-in; admins can log on a scanned
+    // member's behalf. The hourly rollup is a simple incrementing counter,
+    // trusted at the level appropriate for a single-gym app.
+    match /checkIns/{checkInId} {
+      allow create: if isAuth() && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow read, list: if isAdmin();
+    }
+    match /gymStats/{docId} {
+      allow read: if true;
+      allow write: if isAuth();
     }
 
     // BOOKINGS (CLASSES & TRAINERS)

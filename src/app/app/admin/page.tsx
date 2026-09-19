@@ -11,6 +11,7 @@ import { AdminDashboardOverview } from "@/components/admin-dashboard-overview";
 import { usePendingBookings } from "@/hooks/use-pending-bookings";
 import { cn } from "@/lib/utils";
 import { GymSettingsForm } from "@/components/gym-settings-form";
+import { PassScanner } from "@/components/admin/pass-scanner";
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ShieldCheck, CalendarCheck, UserCheck, MessageSquare, Loader2, BarChart2, Trash2, Megaphone, Send, Building2 } from "lucide-react";
+import { ShieldCheck, CalendarCheck, UserCheck, MessageSquare, Loader2, BarChart2, Trash2, Megaphone, Send, Building2, ScanLine } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -506,6 +507,7 @@ export default function AdminPage() {
 
     const adminNavItems = [
       { id: 'analytics', label: 'Analytics', icon: BarChart2, badge: 0 },
+      { id: 'check-in', label: 'Check-In', icon: ScanLine, badge: 0 },
       { id: 'class-bookings', label: 'Classes', icon: CalendarCheck, badge: pendingClassBookings },
       { id: 'trainer-bookings', label: 'Trainers', icon: UserCheck, badge: pendingTrainerBookings },
       { id: 'chat-moderation', label: 'Chat', icon: MessageSquare, badge: 0 },
@@ -540,10 +542,14 @@ export default function AdminPage() {
             </div>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="hidden h-auto w-full grid-cols-1 sm:grid-cols-2 md:grid md:grid-cols-3 lg:h-10 lg:grid-cols-5">
+              <TabsList className="hidden h-auto w-full grid-cols-1 sm:grid-cols-2 md:grid md:grid-cols-3 lg:h-10 lg:grid-cols-6">
                 <TabsTrigger value="analytics">
                     <BarChart2 className="mr-2 size-4"/>
                     Analytics
+                </TabsTrigger>
+                <TabsTrigger value="check-in">
+                    <ScanLine className="mr-2 size-4"/>
+                    Check-In
                 </TabsTrigger>
                 <TabsTrigger value="class-bookings" className="relative">
                     Class Bookings
@@ -564,6 +570,9 @@ export default function AdminPage() {
               </TabsList>
               <TabsContent value="analytics" className="mt-4">
                  <AdminDashboardOverview />
+              </TabsContent>
+              <TabsContent value="check-in" className="mt-4">
+                 <PassScanner />
               </TabsContent>
               <TabsContent value="class-bookings" className="mt-4">
                 <ClassBookingsManager />

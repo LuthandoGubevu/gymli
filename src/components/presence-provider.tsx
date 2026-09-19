@@ -9,6 +9,7 @@ import { useGym } from '@/hooks/use-gym';
 import { getDistance } from '@/lib/geolocation';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_GEOFENCE_METERS } from '@/lib/gym';
+import { logCheckIn, type CheckInSource } from '@/lib/checkin';
 
 interface PresenceContextType {
   isCheckingIn: boolean;
@@ -33,7 +34,7 @@ export const PresenceProvider = ({ children }: { children: ReactNode }) => {
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
 
-  const updatePresence = useCallback(async (isActive: boolean) => {
+  const updatePresence = useCallback(async (isActive: boolean, source?: CheckInSource) => {
     if (!user) return;
 
     const presenceRef = doc(db, 'userPresence', user.uid);
@@ -44,6 +45,9 @@ export const PresenceProvider = ({ children }: { children: ReactNode }) => {
           isActive: true,
           lastSeen: serverTimestamp(),
         }, { merge: true });
+        if (source) {
+          logCheckIn(user.uid, source).catch((error) => console.error("Failed to log check-in:", error));
+        }
       } else {
         await setDoc(presenceRef, { isActive: false }, { merge: true });
       }
@@ -73,7 +77,7 @@ export const PresenceProvider = ({ children }: { children: ReactNode }) => {
       const nearby = isAtGym(position.coords);
       // Only update if the status changes to avoid unnecessary writes
       if (nearby !== isCheckedIn) {
-        updatePresence(nearby);
+        updatePresence(nearby, nearby ? 'geo' : undefined);
       }
     };
 
@@ -109,7 +113,7 @@ export const PresenceProvider = ({ children }: { children: ReactNode }) => {
       async (position) => {
         const nearby = isAtGym(position.coords);
         if (nearby) {
-          await updatePresence(true);
+          await updatePresence(true, 'manual');
           toast({ title: 'Checked In!', description: `Welcome to ${gym?.gymName || 'Gymli'}` });
         } else {
           toast({ variant: 'destructive', title: 'Not Nearby', description: `You need to be within the gym's check-in radius.` });
