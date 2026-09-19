@@ -66,11 +66,31 @@ service cloud.firestore {
       allow write: if isAuth();
     }
 
+    // CLASS SLOTS (per-occurrence capacity/waitlist tracking)
+    // Booking/cancelling is a client-side transaction (no Cloud Functions in
+    // this app), so any authenticated user can write slot counts - the same
+    // trust level already accepted for gymStats above.
+    match /classSlots/{slotId} {
+      allow read: if true;
+      allow create, update: if isAuth();
+    }
+
     // BOOKINGS (CLASSES & TRAINERS)
+    // classBookings: create is open; a member can read/update/list only
+    // their own bookings (list requires the query to filter by their own
+    // userId, which Firestore enforces). The one exception is promoting a
+    // *different* member's waitlisted booking to confirmed when a spot
+    // frees up - that write is made by whichever client processed the
+    // cancellation, not by the promoted member themselves.
     match /classBookings/{bookingId} {
       allow create: if isAuth();
-      allow read, update: if (isAuth() && request.auth.uid == resource.data.userId) || isAdmin();
-      allow list, delete: if isAdmin();
+      allow read: if (isAuth() && request.auth.uid == resource.data.userId) || isAdmin();
+      allow list: if isAdmin() || (isAuth() && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin() ||
+        (isAuth() && request.auth.uid == resource.data.userId) ||
+        (isAuth() && resource.data.status == 'waitlisted' && request.resource.data.status == 'confirmed'
+          && request.resource.data.userId == resource.data.userId);
+      allow delete: if isAdmin();
     }
 
     match /trainerBookings/{bookingId} {
@@ -83,6 +103,14 @@ service cloud.firestore {
     match /chatMessages/{messageId} {
       allow read, list, create: if isAuth();
       allow delete: if isAdmin();
+    }
+
+    // NOTIFICATIONS (e.g. waitlist promotion)
+    // Created by whichever client triggers the event (may be a different
+    // user, e.g. the member who cancels and frees a waitlist spot).
+    match /users/{userId}/notifications/{notificationId} {
+      allow read, update, delete: if isUser(userId) || isAdmin();
+      allow create: if isAuth();
     }
   }
 }

@@ -59,6 +59,9 @@ async function reset() {
   await deleteCollection('gyms');
   await deleteCollection('chats');
   await stripPrimaryGymFromUsers();
+  // Stale slots/bookings would reference class IDs about to be regenerated.
+  await deleteCollection('classSlots');
+  await deleteCollection('classBookings');
 }
 
 async function seedGym() {
@@ -97,16 +100,16 @@ async function seedClasses() {
   if (RESET) await deleteCollection('classes');
 
   const classes = [
-    { day: 'Monday', time: '06:00', name: 'Spinning' },
-    { day: 'Monday', time: '18:00', name: 'HIIT' },
-    { day: 'Tuesday', time: '07:00', name: 'Body Con' },
-    { day: 'Tuesday', time: '17:30', name: 'Box' },
-    { day: 'Wednesday', time: '06:00', name: 'Step' },
-    { day: 'Wednesday', time: '18:00', name: 'Spinning' },
-    { day: 'Thursday', time: '07:00', name: 'HIIT' },
-    { day: 'Thursday', time: '18:00', name: 'Small Group PT' },
-    { day: 'Friday', time: '06:00', name: 'Box' },
-    { day: 'Friday', time: '17:00', name: 'Only for the Brave' },
+    { day: 'Monday', time: '06:00', name: 'Spinning', capacity: 15 },
+    { day: 'Monday', time: '18:00', name: 'HIIT', capacity: 12 },
+    { day: 'Tuesday', time: '07:00', name: 'Body Con', capacity: 20 },
+    { day: 'Tuesday', time: '17:30', name: 'Box', capacity: 10 },
+    { day: 'Wednesday', time: '06:00', name: 'Step', capacity: 15 },
+    { day: 'Wednesday', time: '18:00', name: 'Spinning', capacity: 15 },
+    { day: 'Thursday', time: '07:00', name: 'HIIT', capacity: 12 },
+    { day: 'Thursday', time: '18:00', name: 'Small Group PT', capacity: 6 },
+    { day: 'Friday', time: '06:00', name: 'Box', capacity: 10 },
+    { day: 'Friday', time: '17:00', name: 'Only for the Brave', capacity: 8 },
   ] as const;
 
   const batch = db.batch();

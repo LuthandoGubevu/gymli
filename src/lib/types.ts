@@ -13,7 +13,26 @@ export interface ClassInfo {
   time: TimeSlot;
   day: Day;
   name: ClassName;
+  capacity: number;
 }
+
+// A dated occurrence of a recurring ClassInfo, within the booking window
+export interface ClassOccurrence {
+  slotId: string; // `${classId}_${date}`
+  classId: string;
+  date: string; // yyyy-MM-dd
+}
+
+// classSlots/{classId}_{date}: created lazily on first booking for that occurrence
+export interface ClassSlot {
+  classId: string;
+  date: string; // yyyy-MM-dd
+  capacity: number;
+  confirmedCount: number;
+  waitlistOrder: string[]; // classBookings doc IDs, in waitlist order
+}
+
+export type ClassBookingStatus = 'confirmed' | 'waitlisted' | 'cancelled';
 
 // For Trainers
 export type Specialty = 'Strength' | 'HIIT' | 'Cardio' | 'Boxing' | 'Body Con' | 'Spinning' | 'Step';
@@ -76,3 +95,16 @@ export type GymStatsHourly = Record<string, number>;
 
 // For the digital access pass
 export type MembershipStatus = 'active' | 'paused' | 'expired';
+
+// users/{uid}/notifications/{id}
+export type NotificationType = 'waitlist_promoted';
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  classId?: string;
+  slotId?: string;
+  createdAt: Timestamp;
+  readAt: Timestamp | null;
+}
