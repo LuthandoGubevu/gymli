@@ -20,6 +20,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 
 import { GymCapacityCard } from "@/components/gym-capacity-card";
+import { AccessPassCard } from "@/components/access-pass-card";
+import { BusiestTimesCard } from "@/components/busiest-times-card";
 import { RankProgressCard } from "@/components/rank-progress-card";
 import { Trophy, Award, Medal, Star, Flame, Zap, Check, PlusCircle, CalendarIcon, Pencil } from "lucide-react";
 
@@ -149,7 +151,11 @@ export default function DashboardPage() {
         </CardHeader>
       </Card>
       
-      <GymCapacityCard />
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <GymCapacityCard />
+        <AccessPassCard />
+        <BusiestTimesCard />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <RankProgressCard />

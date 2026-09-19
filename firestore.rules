@@ -45,18 +45,52 @@ service cloud.firestore {
     }
 
     // USER PRESENCE
-    // Users update their own presence doc. Any authenticated user can list
-    // presence docs to compute the live occupancy count.
+    // Users update their own presence doc; admins can also write it (staff-
+    // assisted check-in via the pass scanner). Any authenticated user can
+    // list presence docs to compute the live occupancy count.
     match /userPresence/{userId} {
       allow read, list: if isAuth();
-      allow write: if isUser(userId);
+      allow write: if isUser(userId) || isAdmin();
+    }
+
+    // CHECK-IN LOG & HOURLY ROLLUP (for "busiest times")
+    // Members can only log their own check-in; admins can log on a scanned
+    // member's behalf. The hourly rollup is a simple incrementing counter,
+    // trusted at the level appropriate for a single-gym app.
+    match /checkIns/{checkInId} {
+      allow create: if isAuth() && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow read, list: if isAdmin();
+    }
+    match /gymStats/{docId} {
+      allow read: if true;
+      allow write: if isAuth();
+    }
+
+    // CLASS SLOTS (per-occurrence capacity/waitlist tracking)
+    // Booking/cancelling is a client-side transaction (no Cloud Functions in
+    // this app), so any authenticated user can write slot counts - the same
+    // trust level already accepted for gymStats above.
+    match /classSlots/{slotId} {
+      allow read: if true;
+      allow create, update: if isAuth();
     }
 
     // BOOKINGS (CLASSES & TRAINERS)
+    // classBookings: create is open; a member can read/update/list only
+    // their own bookings (list requires the query to filter by their own
+    // userId, which Firestore enforces). The one exception is promoting a
+    // *different* member's waitlisted booking to confirmed when a spot
+    // frees up - that write is made by whichever client processed the
+    // cancellation, not by the promoted member themselves.
     match /classBookings/{bookingId} {
       allow create: if isAuth();
-      allow read, update: if (isAuth() && request.auth.uid == resource.data.userId) || isAdmin();
-      allow list, delete: if isAdmin();
+      allow read: if (isAuth() && request.auth.uid == resource.data.userId) || isAdmin();
+      allow list: if isAdmin() || (isAuth() && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin() ||
+        (isAuth() && request.auth.uid == resource.data.userId) ||
+        (isAuth() && resource.data.status == 'waitlisted' && request.resource.data.status == 'confirmed'
+          && request.resource.data.userId == resource.data.userId);
+      allow delete: if isAdmin();
     }
 
     match /trainerBookings/{bookingId} {
@@ -69,6 +103,14 @@ service cloud.firestore {
     match /chatMessages/{messageId} {
       allow read, list, create: if isAuth();
       allow delete: if isAdmin();
+    }
+
+    // NOTIFICATIONS (e.g. waitlist promotion)
+    // Created by whichever client triggers the event (may be a different
+    // user, e.g. the member who cancels and frees a waitlist spot).
+    match /users/{userId}/notifications/{notificationId} {
+      allow read, update, delete: if isUser(userId) || isAdmin();
+      allow create: if isAuth();
     }
   }
 }

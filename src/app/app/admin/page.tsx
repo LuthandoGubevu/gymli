@@ -11,6 +11,10 @@ import { AdminDashboardOverview } from "@/components/admin-dashboard-overview";
 import { usePendingBookings } from "@/hooks/use-pending-bookings";
 import { cn } from "@/lib/utils";
 import { GymSettingsForm } from "@/components/gym-settings-form";
+import { ManageClassesForm } from "@/components/manage-classes-form";
+import { PassScanner } from "@/components/admin/pass-scanner";
+import { cancelClassBooking } from "@/lib/waitlist";
+import type { ClassBookingStatus } from "@/lib/types";
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ShieldCheck, CalendarCheck, UserCheck, MessageSquare, Loader2, BarChart2, Trash2, Megaphone, Send, Building2 } from "lucide-react";
+import { ShieldCheck, CalendarCheck, UserCheck, MessageSquare, Loader2, BarChart2, Trash2, Megaphone, Send, Building2, ScanLine, Dumbbell } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,9 +49,24 @@ interface ClassBooking {
   className: string;
   classDay: string;
   classTime: string;
-  status: BookingStatus;
+  classDate: string;
+  slotId: string;
+  status: ClassBookingStatus;
+  waitlistPosition?: number;
   createdAt: Timestamp;
 }
+
+const classBookingBadgeVariant: Record<ClassBookingStatus, "default" | "secondary" | "destructive"> = {
+  confirmed: "default",
+  waitlisted: "secondary",
+  cancelled: "destructive",
+};
+
+const ClassBookingStatusBadge = ({ status, waitlistPosition }: { status: ClassBookingStatus; waitlistPosition?: number }) => (
+  <Badge variant={classBookingBadgeVariant[status]} className="capitalize">
+    {status === 'waitlisted' && waitlistPosition ? `Waitlisted #${waitlistPosition}` : status}
+  </Badge>
+);
 
 // Interface for Trainer Bookings
 interface TrainerBooking {
@@ -91,7 +110,7 @@ const StatusBadge = ({ status }: { status: BookingStatus }) => (
 function ClassBookingsManager() {
   const [bookings, setBookings] = useState<ClassBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<ClassBookingStatus | 'all'>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -120,15 +139,14 @@ function ClassBookingsManager() {
     return () => unsubscribe();
   }, [toast, user]);
 
-  const handleUpdateStatus = async (id: string, status: BookingStatus) => {
+  const handleCancel = async (id: string) => {
     setUpdatingId(id);
     try {
-      const bookingRef = doc(db, "classBookings", id);
-      await updateDoc(bookingRef, { status });
-      toast({ title: "Success", description: `Booking has been ${status}.` });
+      await cancelClassBooking(id);
+      toast({ title: "Success", description: "Booking cancelled. Any waitlisted member has been promoted if there was room." });
     } catch (error) {
-      console.error(`Error updating booking ${id} to ${status}:`, error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to update booking status." });
+      console.error(`Error cancelling booking ${id}:`, error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to cancel booking." });
     } finally {
       setUpdatingId(null);
     }
@@ -143,20 +161,20 @@ function ClassBookingsManager() {
   return (
      <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><CalendarCheck/>Class Booking Requests</CardTitle>
-          <CardDescription>View and manage all class booking requests from members.</CardDescription>
+          <CardTitle className="flex items-center gap-2"><CalendarCheck/>Class Bookings</CardTitle>
+          <CardDescription>Bookings confirm or waitlist automatically based on class capacity. Cancel a spot to promote the next waitlisted member.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
            <div className="flex flex-wrap gap-4">
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as BookingStatus | 'all')}>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ClassBookingStatus | 'all')}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="declined">Declined</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="waitlisted">Waitlisted</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
            </div>
@@ -182,18 +200,13 @@ function ClassBookingsManager() {
                           <div className="text-sm text-muted-foreground">{booking.userEmail}</div>
                         </TableCell>
                         <TableCell>{booking.className}</TableCell>
-                        <TableCell>{booking.classDay}, {booking.classTime}</TableCell>
-                        <TableCell><StatusBadge status={booking.status} /></TableCell>
+                        <TableCell>{booking.classDate ?? booking.classDay}, {booking.classTime}</TableCell>
+                        <TableCell><ClassBookingStatusBadge status={booking.status} waitlistPosition={booking.waitlistPosition} /></TableCell>
                         <TableCell className="text-right">
-                          {booking.status === 'pending' && (
-                            <div className="flex gap-2 justify-end">
-                              <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(booking.id, 'accepted')} disabled={updatingId === booking.id}>
-                                {updatingId === booking.id ? <Loader2 className="animate-spin" /> : 'Accept'}
-                              </Button>
-                              <Button variant="destructive" size="sm" onClick={() => handleUpdateStatus(booking.id, 'declined')} disabled={updatingId === booking.id}>
-                                {updatingId === booking.id ? <Loader2 className="animate-spin" /> : 'Decline'}
-                              </Button>
-                            </div>
+                          {booking.status !== 'cancelled' && (
+                            <Button variant="destructive" size="sm" onClick={() => handleCancel(booking.id)} disabled={updatingId === booking.id}>
+                              {updatingId === booking.id ? <Loader2 className="animate-spin" /> : 'Cancel'}
+                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
@@ -506,9 +519,11 @@ export default function AdminPage() {
 
     const adminNavItems = [
       { id: 'analytics', label: 'Analytics', icon: BarChart2, badge: 0 },
+      { id: 'check-in', label: 'Check-In', icon: ScanLine, badge: 0 },
       { id: 'class-bookings', label: 'Classes', icon: CalendarCheck, badge: pendingClassBookings },
       { id: 'trainer-bookings', label: 'Trainers', icon: UserCheck, badge: pendingTrainerBookings },
       { id: 'chat-moderation', label: 'Chat', icon: MessageSquare, badge: 0 },
+      { id: 'manage-classes', label: 'Manage Classes', icon: Dumbbell, badge: 0 },
       { id: 'gym-settings', label: 'Gym', icon: Building2, badge: 0 },
     ];
 
@@ -540,10 +555,14 @@ export default function AdminPage() {
             </div>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="hidden h-auto w-full grid-cols-1 sm:grid-cols-2 md:grid md:grid-cols-3 lg:h-10 lg:grid-cols-5">
+              <TabsList className="hidden h-auto w-full grid-cols-1 sm:grid-cols-2 md:grid md:grid-cols-3 lg:h-10 lg:grid-cols-7">
                 <TabsTrigger value="analytics">
                     <BarChart2 className="mr-2 size-4"/>
                     Analytics
+                </TabsTrigger>
+                <TabsTrigger value="check-in">
+                    <ScanLine className="mr-2 size-4"/>
+                    Check-In
                 </TabsTrigger>
                 <TabsTrigger value="class-bookings" className="relative">
                     Class Bookings
@@ -557,6 +576,10 @@ export default function AdminPage() {
                     <MessageSquare className="mr-2 size-4"/>
                     Chat Moderation
                 </TabsTrigger>
+                <TabsTrigger value="manage-classes">
+                    <Dumbbell className="mr-2 size-4"/>
+                    Manage Classes
+                </TabsTrigger>
                 <TabsTrigger value="gym-settings">
                     <Building2 className="mr-2 size-4"/>
                     Gym Settings
@@ -564,6 +587,9 @@ export default function AdminPage() {
               </TabsList>
               <TabsContent value="analytics" className="mt-4">
                  <AdminDashboardOverview />
+              </TabsContent>
+              <TabsContent value="check-in" className="mt-4">
+                 <PassScanner />
               </TabsContent>
               <TabsContent value="class-bookings" className="mt-4">
                 <ClassBookingsManager />
@@ -573,6 +599,9 @@ export default function AdminPage() {
               </TabsContent>
               <TabsContent value="chat-moderation" className="mt-4">
                  <ChatModerationManager />
+              </TabsContent>
+              <TabsContent value="manage-classes" className="mt-4">
+                 <ManageClassesForm />
               </TabsContent>
               <TabsContent value="gym-settings" className="mt-4">
                  <GymSettingsForm />

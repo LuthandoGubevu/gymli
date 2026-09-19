@@ -19,10 +19,13 @@ export function usePendingBookings() {
       return;
     }
 
-    const classQuery = query(collection(db, "classBookings"), where("status", "==", "pending"));
+    // Class bookings auto-resolve to confirmed/waitlisted based on capacity,
+    // so there's nothing for admin to approve - "pending" here surfaces how
+    // many members are currently on a waitlist instead.
+    const classQuery = query(collection(db, "classBookings"), where("status", "==", "waitlisted"));
     const classUnsubscribe = onSnapshot(classQuery, (snapshot) => {
       setPendingClassBookings(snapshot.size);
-      setIsLoading(false); 
+      setIsLoading(false);
     }, () => setIsLoading(false));
 
     const trainerQuery = query(collection(db, "trainerBookings"), where("status", "==", "pending"));
