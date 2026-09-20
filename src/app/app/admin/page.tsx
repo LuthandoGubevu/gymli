@@ -12,7 +12,7 @@ import { usePendingBookings } from "@/hooks/use-pending-bookings";
 import { cn } from "@/lib/utils";
 import { GymSettingsForm } from "@/components/gym-settings-form";
 import { ManageClassesForm } from "@/components/manage-classes-form";
-import { PassScanner } from "@/components/admin/pass-scanner";
+import { ManageNoticesForm } from "@/components/admin/manage-notices-form";
 import { cancelClassBooking } from "@/lib/waitlist";
 import type { ClassBookingStatus } from "@/lib/types";
 
@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ShieldCheck, CalendarCheck, UserCheck, MessageSquare, Loader2, BarChart2, Trash2, Megaphone, Send, Building2, ScanLine, Dumbbell } from "lucide-react";
+import { ShieldCheck, CalendarCheck, UserCheck, MessageSquare, Loader2, BarChart2, Trash2, Megaphone, Send, Building2, Dumbbell } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -519,7 +519,7 @@ export default function AdminPage() {
 
     const adminNavItems = [
       { id: 'analytics', label: 'Analytics', icon: BarChart2, badge: 0 },
-      { id: 'check-in', label: 'Check-In', icon: ScanLine, badge: 0 },
+      { id: 'notices', label: 'Notices', icon: Megaphone, badge: 0 },
       { id: 'class-bookings', label: 'Classes', icon: CalendarCheck, badge: pendingClassBookings },
       { id: 'trainer-bookings', label: 'Trainers', icon: UserCheck, badge: pendingTrainerBookings },
       { id: 'chat-moderation', label: 'Chat', icon: MessageSquare, badge: 0 },
@@ -560,9 +560,9 @@ export default function AdminPage() {
                     <BarChart2 className="mr-2 size-4"/>
                     Analytics
                 </TabsTrigger>
-                <TabsTrigger value="check-in">
-                    <ScanLine className="mr-2 size-4"/>
-                    Check-In
+                <TabsTrigger value="notices">
+                    <Megaphone className="mr-2 size-4"/>
+                    Notices
                 </TabsTrigger>
                 <TabsTrigger value="class-bookings" className="relative">
                     Class Bookings
@@ -588,8 +588,8 @@ export default function AdminPage() {
               <TabsContent value="analytics" className="mt-4">
                  <AdminDashboardOverview />
               </TabsContent>
-              <TabsContent value="check-in" className="mt-4">
-                 <PassScanner />
+              <TabsContent value="notices" className="mt-4">
+                 <ManageNoticesForm />
               </TabsContent>
               <TabsContent value="class-bookings" className="mt-4">
                 <ClassBookingsManager />

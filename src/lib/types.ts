@@ -93,9 +93,6 @@ export interface CheckIn {
 // gymStats/hourly doc: keys are "{dayOfWeek}-{hourOfDay}" -> visit count
 export type GymStatsHourly = Record<string, number>;
 
-// For the digital access pass
-export type MembershipStatus = 'active' | 'paused' | 'expired';
-
 // users/{uid}/notifications/{id}
 export type NotificationType = 'waitlist_promoted';
 export interface AppNotification {
@@ -165,4 +162,37 @@ export interface LeaderboardEntry {
   visitsInPeriod: number;
   streakDays: number;
   updatedAt?: Timestamp;
+}
+
+// workoutLogs/{uid}/logs/{id}: manual first pass. The `source` field is the
+// seam a future native wrapper or OAuth import (Strava/Fitbit) could write
+// through without a schema change - Apple HealthKit / Android Health
+// Connect have no web-reachable API, so this app can't sync them directly.
+export type WorkoutLogSource = 'manual' | 'healthkit' | 'healthconnect' | 'strava';
+export interface WorkoutLog {
+  id: string;
+  date: string; // yyyy-MM-dd
+  type: string;
+  durationMin: number;
+  notes?: string;
+  source: WorkoutLogSource;
+  createdAt: Timestamp;
+}
+
+// bodyMetrics/{uid}/entries/{id}
+export interface BodyMetricEntry {
+  id: string;
+  date: string; // yyyy-MM-dd
+  weightKg: number;
+  source: WorkoutLogSource;
+  createdAt: Timestamp;
+}
+
+// notices/{id}: admin-posted gym announcements
+export interface Notice {
+  id: string;
+  title: string;
+  body: string;
+  authorName: string;
+  createdAt: Timestamp;
 }

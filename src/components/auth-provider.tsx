@@ -3,10 +3,9 @@
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter, usePathname } from 'next/navigation';
-import type { MembershipStatus } from '@/lib/types';
 
 interface UserProfile extends User {
   role?: 'user' | 'admin';
@@ -16,10 +15,6 @@ interface UserProfile extends User {
   username?: string;
   autoPresenceEnabled?: boolean;
   leaderboardOptIn?: boolean;
-  memberNumber?: string;
-  membershipStatus?: MembershipStatus;
-  passCode?: string;
-  passCodeUpdatedAt?: Timestamp;
 }
 
 interface AuthContextType {
