@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, CalendarDays, Users, MessageSquare, QrCode, User as UserIcon } from 'lucide-react';
+import { Home, CalendarDays, Users, MessageSquare, Megaphone, User as UserIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 
@@ -19,7 +19,7 @@ export function BottomNav() {
     { href: '/app/classes', label: 'Classes', icon: CalendarDays },
     { href: '/app/trainers', label: 'Trainers', icon: Users },
     { href: '/app/chat', label: 'Chat', icon: MessageSquare },
-    { href: '/app/pass', label: 'Pass', icon: QrCode },
+    { href: '/app/notices', label: 'Notices', icon: Megaphone },
     { href: '/app/profile', label: 'Profile', icon: UserIcon },
   ];
 

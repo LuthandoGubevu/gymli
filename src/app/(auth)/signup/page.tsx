@@ -10,7 +10,6 @@ import * as z from "zod";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { generateMemberNumber } from "@/lib/pass";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -83,8 +82,6 @@ export default function SignupPage() {
         username: values.username,
         email: values.email,
         role: isAdmin ? "admin" : "user",
-        memberNumber: generateMemberNumber(),
-        membershipStatus: "active",
         createdAt: serverTimestamp(),
       });
       

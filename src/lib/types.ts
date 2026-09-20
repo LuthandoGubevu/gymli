@@ -93,9 +93,6 @@ export interface CheckIn {
 // gymStats/hourly doc: keys are "{dayOfWeek}-{hourOfDay}" -> visit count
 export type GymStatsHourly = Record<string, number>;
 
-// For the digital access pass
-export type MembershipStatus = 'active' | 'paused' | 'expired';
-
 // users/{uid}/notifications/{id}
 export type NotificationType = 'waitlist_promoted';
 export interface AppNotification {
@@ -188,5 +185,14 @@ export interface BodyMetricEntry {
   date: string; // yyyy-MM-dd
   weightKg: number;
   source: WorkoutLogSource;
+  createdAt: Timestamp;
+}
+
+// notices/{id}: admin-posted gym announcements
+export interface Notice {
+  id: string;
+  title: string;
+  body: string;
+  authorName: string;
   createdAt: Timestamp;
 }

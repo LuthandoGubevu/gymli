@@ -17,13 +17,13 @@ service cloud.firestore {
     }
 
     // USERS
-    // Users can read/update their own profile, but never change their own role
-    // or membership status via a client write. Admins can read/manage any profile.
+    // Users can read/update their own profile, but never change their own
+    // role via a client write. Admins can read/manage any profile.
     match /users/{userId} {
       allow read: if isUser(userId) || isAdmin();
       allow update: if isAdmin() || (
         isUser(userId) &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'membershipStatus', 'memberNumber'])
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
       );
       allow list, create, delete: if isAdmin();
     }
@@ -45,20 +45,20 @@ service cloud.firestore {
     }
 
     // USER PRESENCE
-    // Users update their own presence doc; admins can also write it (staff-
-    // assisted check-in via the pass scanner). Any authenticated user can
-    // list presence docs to compute the live occupancy count.
+    // Users update their own presence doc via geolocation auto/manual
+    // check-in. Any authenticated user can list presence docs to compute
+    // the live occupancy count.
     match /userPresence/{userId} {
       allow read, list: if isAuth();
-      allow write: if isUser(userId) || isAdmin();
+      allow write: if isUser(userId);
     }
 
     // CHECK-IN LOG & HOURLY ROLLUP (for "busiest times")
-    // Members can only log their own check-in; admins can log on a scanned
-    // member's behalf. The hourly rollup is a simple incrementing counter,
-    // trusted at the level appropriate for a single-gym app.
+    // Members can only log their own check-in. The hourly rollup is a
+    // simple incrementing counter, trusted at the level appropriate for a
+    // single-gym app.
     match /checkIns/{checkInId} {
-      allow create: if isAuth() && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
       allow read, list: if isAdmin();
     }
     match /gymStats/{docId} {
@@ -114,31 +114,30 @@ service cloud.firestore {
     }
 
     // GAMIFICATION (streaks, badges, personal records, leaderboard)
-    // All self-write (or admin, for the pass scanner's staff-assisted
-    // check-in) - there's no server component able to hold trusted
+    // All self-write - there's no server component able to hold trusted
     // credentials in this app's actual deployment (Netlify, not Firebase
     // App Hosting), so this accepts the same client-trust tradeoff already
     // made for gymStats/classSlots: a member could inflate their own
     // stats via a direct write, but can't affect anyone else's.
     match /gymVisits/{visitId} {
       allow read: if isAdmin();
-      allow create: if isAuth() && (request.resource.data.userId == request.auth.uid || isAdmin());
-      allow update: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuth() && resource.data.userId == request.auth.uid;
     }
     match /gamification/{userId} {
       allow read: if isUser(userId) || isAdmin();
-      allow write: if isUser(userId) || isAdmin();
+      allow write: if isUser(userId);
     }
     match /personalRecords/{userId}/records/{recordId} {
       allow read, write: if isUser(userId) || isAdmin();
     }
     match /userBadges/{userId}/earned/{badgeId} {
       allow read: if isUser(userId) || isAdmin();
-      allow write: if isUser(userId) || isAdmin();
+      allow write: if isUser(userId);
     }
     match /leaderboard/{monthKey}/entries/{userId} {
       allow read, list: if isAuth();
-      allow write: if isUser(userId) || isAdmin();
+      allow write: if isUser(userId);
     }
 
     // AI COACH & WORKOUT LOG
@@ -153,6 +152,12 @@ service cloud.firestore {
     }
     match /bodyMetrics/{userId}/entries/{entryId} {
       allow read, write: if isUser(userId) || isAdmin();
+    }
+
+    // NOTICES (admin-posted gym announcements)
+    match /notices/{noticeId} {
+      allow read, list: if isAuth();
+      allow write: if isAdmin();
     }
   }
 }

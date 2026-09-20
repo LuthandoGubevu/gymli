@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, User, Shield, LogOut, Dumbbell, CalendarDays, Users, MessageSquare, QrCode, Trophy, Sparkles, NotebookPen } from "lucide-react";
+import { LayoutDashboard, User, Shield, LogOut, Dumbbell, CalendarDays, Users, MessageSquare, Megaphone, Trophy, Sparkles, NotebookPen } from "lucide-react";
 import {
   SidebarHeader,
   SidebarContent,
@@ -45,7 +45,7 @@ export function SidebarNav() {
     { href: "/app/classes", label: "Classes", icon: CalendarDays, tooltip: "View Classes" },
     { href: "/app/trainers", label: "Trainers", icon: Users, tooltip: "View Trainers" },
     { href: "/app/chat", label: "Gym Chat", icon: MessageSquare, tooltip: "Join Gym Chat" },
-    { href: "/app/pass", label: "My Pass", icon: QrCode, tooltip: "View My Access Pass" },
+    { href: "/app/notices", label: "Notices", icon: Megaphone, tooltip: "View Gym Notices" },
     { href: "/app/leaderboard", label: "Leaderboard", icon: Trophy, tooltip: "View Leaderboard" },
     { href: "/app/coach", label: "AI Coach", icon: Sparkles, tooltip: "Get Your Weekly Plan" },
     { href: "/app/log", label: "Workout Log", icon: NotebookPen, tooltip: "Log Workouts & Weight" },
