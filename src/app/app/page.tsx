@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 
@@ -23,33 +24,16 @@ import { GymCapacityCard } from "@/components/gym-capacity-card";
 import { AccessPassCard } from "@/components/access-pass-card";
 import { BusiestTimesCard } from "@/components/busiest-times-card";
 import { RankProgressCard } from "@/components/rank-progress-card";
-import { Trophy, Award, Medal, Star, Flame, Zap, Check, PlusCircle, CalendarIcon, Pencil } from "lucide-react";
-
-interface PersonalRecord {
-  id: string;
-  exercise: string;
-  weight: string;
-  date: string;
-}
-
-const initialPrs: PersonalRecord[] = [
-  { id: 'pr1', exercise: 'Bench Press', weight: '100 kg', date: '2024-07-15' },
-  { id: 'pr2', exercise: 'Squat', weight: '140 kg', date: '2024-07-10' },
-  { id: 'pr3', exercise: 'Deadlift', weight: '180 kg', date: '2024-07-12' },
-];
-
-const mockAchievements = [
-  { id: 1, name: 'First 5 Visits', icon: Star, description: 'Completed your first 5 workouts.', achieved: true },
-  { id: 2, name: 'Month Challenger', icon: Medal, description: 'Visited 12 times in a month.', achieved: true },
-  { id: 3, name: 'Early Bird', icon: Flame, description: 'Completed 10 morning workouts.', achieved: false },
-  { id: 4, name: 'HIIT Expert', icon: Zap, description: 'Attended 5 HIIT classes.', achieved: true },
-  { id: 5, name: 'Consistent Kilo', icon: Trophy, description: 'Lifted over 10,000kg in a month.', achieved: true },
-  { id: 6, name: 'New PR!', icon: Award, description: 'Set a new personal record.', achieved: true },
-];
+import { AchievementsCard } from "@/components/achievements-card";
+import { usePersonalRecords } from "@/hooks/use-personal-records";
+import { useToast } from "@/hooks/use-toast";
+import { Trophy, PlusCircle, CalendarIcon, Pencil, Trash2 } from "lucide-react";
+import type { PersonalRecord, WeightUnit } from "@/lib/types";
 
 const prFormSchema = z.object({
     exercise: z.string().min(2, { message: "Exercise name must be at least 2 characters." }),
-    weight: z.string().min(2, { message: "Please include units (e.g., kg, lbs)." }),
+    value: z.coerce.number().positive({ message: "Enter a positive number." }),
+    unit: z.enum(['kg', 'lb']),
     date: z.date({
         required_error: "A date for your PR is required.",
     }),
@@ -58,9 +42,12 @@ const prFormSchema = z.object({
 export default function DashboardPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>(initialPrs);
+  const { toast } = useToast();
+  const { records, addRecord, updateRecord, deleteRecord } = usePersonalRecords();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PersonalRecord | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -72,7 +59,7 @@ export default function DashboardPage() {
     resolver: zodResolver(prFormSchema),
     defaultValues: {
       exercise: "",
-      weight: "",
+      unit: "kg" as WeightUnit,
     },
   });
 
@@ -80,52 +67,54 @@ export default function DashboardPage() {
       setIsDialogOpen(open);
       if (!open) {
           setEditingRecord(null);
-          form.reset({ exercise: "", weight: "", date: undefined });
+          form.reset({ exercise: "", value: undefined, unit: "kg", date: undefined });
       }
   };
 
   const handleAddClick = () => {
     setEditingRecord(null);
-    form.reset({ exercise: "", weight: "", date: new Date() });
+    form.reset({ exercise: "", value: undefined, unit: "kg", date: new Date() });
     setIsDialogOpen(true);
   };
-  
+
   const handleEditClick = (record: PersonalRecord) => {
       setEditingRecord(record);
       form.reset({
           exercise: record.exercise,
-          weight: record.weight,
+          value: record.value,
+          unit: record.unit,
           date: new Date(record.date),
       });
       setIsDialogOpen(true);
   };
 
-  function onSubmit(data: z.infer<typeof prFormSchema>) {
-    const newRecordData = {
-        ...data,
-        date: format(data.date, "yyyy-MM-dd"),
-    };
-
-    if (editingRecord) {
-        // Update the existing PR by its ID
-        setPersonalRecords(prevRecords => 
-            prevRecords.map(pr => pr.id === editingRecord.id ? { ...pr, ...newRecordData } : pr)
-        );
-    } else {
-        // Add a new PR, or update if exercise name already exists
-        const existingPrIndex = personalRecords.findIndex(pr => pr.exercise.toLowerCase() === data.exercise.toLowerCase());
-        if (existingPrIndex !== -1) {
-           setPersonalRecords(prevRecords => {
-               const updatedRecords = [...prevRecords];
-               updatedRecords[existingPrIndex] = { ...updatedRecords[existingPrIndex], ...newRecordData };
-               return updatedRecords;
-           });
-        } else {
-            setPersonalRecords(prevRecords => [...prevRecords, { ...newRecordData, id: `pr${Date.now()}` }]);
-        }
+  const handleDelete = async (record: PersonalRecord) => {
+    setDeletingId(record.id);
+    try {
+      await deleteRecord(record.id);
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Could not delete this record." });
+    } finally {
+      setDeletingId(null);
     }
-    
-    handleOpenChange(false);
+  };
+
+  async function onSubmit(data: z.infer<typeof prFormSchema>) {
+    setIsSaving(true);
+    try {
+      const payload = { exercise: data.exercise, value: data.value, unit: data.unit, date: format(data.date, "yyyy-MM-dd") };
+      if (editingRecord) {
+        await updateRecord(editingRecord.id, payload);
+      } else {
+        await addRecord(payload);
+      }
+      toast({ title: "✅ Personal Record Saved" });
+      handleOpenChange(false);
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Could not save your personal record." });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   if (user?.role === 'admin') {
@@ -150,7 +139,7 @@ export default function DashboardPage() {
           <CardDescription>Ready to crush your goals today?</CardDescription>
         </CardHeader>
       </Card>
-      
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <GymCapacityCard />
         <AccessPassCard />
@@ -159,23 +148,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <RankProgressCard />
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Award className="text-primary"/>Achievements</CardTitle>
-                <CardDescription>Milestones you've unlocked.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-3 gap-4 md:grid-cols-4 lg:grid-cols-3">
-              {mockAchievements.slice(0, 6).map(ach => (
-                <div key={ach.id} className="flex flex-col items-center text-center gap-2" title={ach.description}>
-                   <div className="relative">
-                      <ach.icon className={`size-10 ${ach.achieved ? 'text-primary' : 'text-muted-foreground/50'}`} />
-                      {ach.achieved && <Check className="absolute -bottom-1 -right-1 size-5 rounded-full bg-green-500 text-white p-0.5" />}
-                   </div>
-                   <p className={`text-xs ${ach.achieved ? 'text-foreground' : 'text-muted-foreground'}`}>{ach.name}</p>
-                </div>
-              ))}
-            </CardContent>
-        </Card>
+        <AchievementsCard />
       </div>
 
       <Card>
@@ -202,15 +175,19 @@ export default function DashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {personalRecords.length > 0 ? personalRecords.map(pr => (
+              {records.length > 0 ? records.map(pr => (
                 <TableRow key={pr.id}>
                   <TableCell className="font-medium">{pr.exercise}</TableCell>
-                  <TableCell>{pr.weight}</TableCell>
+                  <TableCell>{pr.value} {pr.unit}</TableCell>
                   <TableCell>{pr.date}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEditClick(pr)}>
                        <Pencil className="h-4 w-4" />
                        <span className="sr-only">Edit PR</span>
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(pr)} disabled={deletingId === pr.id}>
+                       <Trash2 className="h-4 w-4 text-destructive" />
+                       <span className="sr-only">Delete PR</span>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -231,7 +208,7 @@ export default function DashboardPage() {
               <DialogHeader>
                   <DialogTitle>{editingRecord ? 'Edit Personal Record' : 'Add New Personal Record'}</DialogTitle>
                   <DialogDescription>
-                      {editingRecord ? 'Update the details of your personal best.' : 'Log a new PR. If the exercise exists, it will be updated.'}
+                      {editingRecord ? 'Update the details of your personal best.' : 'Log a new personal record.'}
                   </DialogDescription>
               </DialogHeader>
               <Form {...form}>
@@ -249,19 +226,42 @@ export default function DashboardPage() {
                               </FormItem>
                           )}
                       />
-                      <FormField
-                          control={form.control}
-                          name="weight"
-                          render={({ field }) => (
-                              <FormItem>
-                                  <FormLabel>Weight</FormLabel>
-                                  <FormControl>
-                                      <Input placeholder="e.g., 105 kg" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                              </FormItem>
-                          )}
-                      />
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="value"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Weight</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" step="any" placeholder="100" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="unit"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Unit</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="kg">kg</SelectItem>
+                                            <SelectItem value="lb">lb</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                      </div>
                       <FormField
                           control={form.control}
                           name="date"
@@ -304,7 +304,7 @@ export default function DashboardPage() {
                           )}
                       />
                       <DialogFooter>
-                          <Button type="submit">Save Record</Button>
+                          <Button type="submit" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Record'}</Button>
                       </DialogFooter>
                   </form>
               </Form>

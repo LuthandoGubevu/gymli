@@ -112,5 +112,33 @@ service cloud.firestore {
       allow read, update, delete: if isUser(userId) || isAdmin();
       allow create: if isAuth();
     }
+
+    // GAMIFICATION (streaks, badges, personal records, leaderboard)
+    // All self-write (or admin, for the pass scanner's staff-assisted
+    // check-in) - there's no server component able to hold trusted
+    // credentials in this app's actual deployment (Netlify, not Firebase
+    // App Hosting), so this accepts the same client-trust tradeoff already
+    // made for gymStats/classSlots: a member could inflate their own
+    // stats via a direct write, but can't affect anyone else's.
+    match /gymVisits/{visitId} {
+      allow read: if isAdmin();
+      allow create: if isAuth() && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+    match /gamification/{userId} {
+      allow read: if isUser(userId) || isAdmin();
+      allow write: if isUser(userId) || isAdmin();
+    }
+    match /personalRecords/{userId}/records/{recordId} {
+      allow read, write: if isUser(userId) || isAdmin();
+    }
+    match /userBadges/{userId}/earned/{badgeId} {
+      allow read: if isUser(userId) || isAdmin();
+      allow write: if isUser(userId) || isAdmin();
+    }
+    match /leaderboard/{monthKey}/entries/{userId} {
+      allow read, list: if isAuth();
+      allow write: if isUser(userId) || isAdmin();
+    }
   }
 }

@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useGym } from "@/hooks/use-gym";
 import { updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import { maybeUpdateLeaderboard, removeFromLeaderboard } from "@/lib/gamification";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,6 +44,7 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [isUpdatingLeaderboard, setIsUpdatingLeaderboard] = useState(false);
   const { gym } = useGym();
 
   const form = useForm<z.infer<typeof profileFormSchema>>({
@@ -117,6 +121,25 @@ export default function ProfilePage() {
       setIsLoading(false);
     }
   }
+
+  const handleLeaderboardOptInChange = async (checked: boolean) => {
+    if (!user) return;
+    setIsUpdatingLeaderboard(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { leaderboardOptIn: checked });
+      if (checked) {
+        await maybeUpdateLeaderboard(user.uid);
+      } else {
+        await removeFromLeaderboard(user.uid);
+      }
+      user.leaderboardOptIn = checked;
+      toast({ title: "Preference Updated", description: `Leaderboard visibility has been ${checked ? 'enabled' : 'disabled'}.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Update Failed", description: "Could not save your preference." });
+    } finally {
+      setIsUpdatingLeaderboard(false);
+    }
+  };
 
   if (isFetching || user?.role === 'admin') {
     return <ProfileSkeleton />;
@@ -221,6 +244,23 @@ export default function ProfilePage() {
             </form>
             </Form>
         </CardContent>
+        </Card>
+        <Card className="shadow-lg max-w-2xl">
+            <CardHeader>
+                <CardTitle>Leaderboard</CardTitle>
+                <CardDescription>Show your visits and streak on the gym-wide monthly leaderboard.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center space-x-2">
+                    <Switch
+                        id="leaderboard-opt-in"
+                        checked={user?.leaderboardOptIn ?? false}
+                        onCheckedChange={handleLeaderboardOptInChange}
+                        disabled={isUpdatingLeaderboard}
+                    />
+                    <Label htmlFor="leaderboard-opt-in">Appear on the leaderboard</Label>
+                </div>
+            </CardContent>
         </Card>
     </div>
   );

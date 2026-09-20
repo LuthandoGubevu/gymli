@@ -2,10 +2,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Flame, ShieldCheck, Gem, Rocket, Crown, Calendar, Clock } from "lucide-react";
+import { Flame, ShieldCheck, Gem, Rocket, Crown, Calendar, Trophy } from "lucide-react";
 import React from "react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useGamification } from "@/hooks/use-gamification";
+import { Skeleton } from "./ui/skeleton";
 
 const ranks = [
   { name: "Rookie", minVisits: 0, icon: Gem, color: "text-green-400" },
@@ -15,24 +17,26 @@ const ranks = [
   { name: "Champion", minVisits: 25, icon: Crown, color: "text-primary" },
 ];
 
-// Mock data
-const userStats = {
-  visitsThisMonth: 12,
-  avgDurationMinutes: 55,
-  currentStreak: 4,
-};
-
 export function RankProgressCard() {
-  const currentRankIndex = ranks.slice().reverse().findIndex(r => userStats.visitsThisMonth >= r.minVisits);
+  const { gamification, isLoading } = useGamification();
+  const visitsThisMonth = gamification?.visitsThisMonth ?? 0;
+  const currentStreakDays = gamification?.currentStreakDays ?? 0;
+  const longestStreakDays = gamification?.longestStreakDays ?? 0;
+
+  const currentRankIndex = ranks.slice().reverse().findIndex(r => visitsThisMonth >= r.minVisits);
   const currentRank = ranks[ranks.length - 1 - currentRankIndex];
   const nextRank = ranks[ranks.length - currentRankIndex];
 
   const progressToNextRank = nextRank
-    ? ((userStats.visitsThisMonth - currentRank.minVisits) / (nextRank.minVisits - currentRank.minVisits)) * 100
+    ? ((visitsThisMonth - currentRank.minVisits) / (nextRank.minVisits - currentRank.minVisits)) * 100
     : 100;
 
-  const visitsNeeded = nextRank ? nextRank.minVisits - userStats.visitsThisMonth : 0;
-  
+  const visitsNeeded = nextRank ? nextRank.minVisits - visitsThisMonth : 0;
+
+  if (isLoading) {
+    return <Skeleton className="h-96 w-full rounded-2xl lg:col-span-2" />;
+  }
+
   return (
     <Card className="shadow-lg lg:col-span-2">
       <CardHeader>
@@ -55,26 +59,26 @@ export function RankProgressCard() {
         <div className="grid grid-cols-3 gap-4 text-center">
           <div className="flex flex-col items-center justify-center rounded-lg border p-4">
             <Calendar className="mb-2 size-6 text-primary" />
-            <p className="text-2xl font-bold">{userStats.visitsThisMonth}</p>
+            <p className="text-2xl font-bold">{visitsThisMonth}</p>
             <p className="text-xs text-muted-foreground">Visits this month</p>
           </div>
            <div className="flex flex-col items-center justify-center rounded-lg border p-4">
-            <Clock className="mb-2 size-6 text-primary" />
-            <p className="text-2xl font-bold">{userStats.avgDurationMinutes}<span className="text-base text-muted-foreground">m</span></p>
-            <p className="text-xs text-muted-foreground">Avg. Duration</p>
-          </div>
-           <div className="flex flex-col items-center justify-center rounded-lg border p-4">
             <Flame className="mb-2 size-6 text-primary" />
-            <p className="text-2xl font-bold">{userStats.currentStreak}</p>
+            <p className="text-2xl font-bold">{currentStreakDays}</p>
             <p className="text-xs text-muted-foreground">Current Streak</p>
           </div>
+           <div className="flex flex-col items-center justify-center rounded-lg border p-4">
+            <Trophy className="mb-2 size-6 text-primary" />
+            <p className="text-2xl font-bold">{longestStreakDays}</p>
+            <p className="text-xs text-muted-foreground">Longest Streak</p>
+          </div>
         </div>
-        
+
         <div className="pt-4">
             <TooltipProvider>
                 <div className="relative flex justify-between items-center">
                     {ranks.map((rank) => {
-                        const isAchieved = userStats.visitsThisMonth >= rank.minVisits;
+                        const isAchieved = visitsThisMonth >= rank.minVisits;
                         const isCurrent = currentRank.name === rank.name;
 
                         return (
