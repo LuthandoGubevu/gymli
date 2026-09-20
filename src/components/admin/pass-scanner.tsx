@@ -6,6 +6,7 @@ import { doc, getDoc, query, collection, where, getDocs, limit } from "firebase/
 import { db } from "@/lib/firebase";
 import { decodePassPayload } from "@/lib/pass";
 import { logCheckIn } from "@/lib/checkin";
+import { recordVisit } from "@/lib/gamification";
 import { setDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -164,6 +165,7 @@ export function PassScanner() {
         lastSeen: serverTimestamp(),
       }, { merge: true });
       await logCheckIn(verifiedMember.uid, 'qr');
+      await recordVisit(verifiedMember.uid, 'qr');
       toast({ title: '✅ Checked In', description: `${verifiedMember.displayName} has been checked in.` });
       setVerifiedMember(null);
       setManualInput("");

@@ -15,6 +15,7 @@ interface UserProfile extends User {
   lastName?: string;
   username?: string;
   autoPresenceEnabled?: boolean;
+  leaderboardOptIn?: boolean;
   memberNumber?: string;
   membershipStatus?: MembershipStatus;
   passCode?: string;

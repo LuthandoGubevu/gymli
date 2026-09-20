@@ -10,6 +10,7 @@ import { getDistance } from '@/lib/geolocation';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_GEOFENCE_METERS } from '@/lib/gym';
 import { logCheckIn, type CheckInSource } from '@/lib/checkin';
+import { recordVisit } from '@/lib/gamification';
 
 interface PresenceContextType {
   isCheckingIn: boolean;
@@ -47,6 +48,7 @@ export const PresenceProvider = ({ children }: { children: ReactNode }) => {
         }, { merge: true });
         if (source) {
           logCheckIn(user.uid, source).catch((error) => console.error("Failed to log check-in:", error));
+          recordVisit(user.uid, source).catch((error) => console.error("Failed to record gamification visit:", error));
         }
       } else {
         await setDoc(presenceRef, { isActive: false }, { merge: true });

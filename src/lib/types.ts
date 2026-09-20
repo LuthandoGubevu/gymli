@@ -108,3 +108,61 @@ export interface AppNotification {
   createdAt: Timestamp;
   readAt: Timestamp | null;
 }
+
+// gymVisits/{uid}_{yyyy-MM-dd}: one doc per member per calendar day,
+// deterministic ID makes check-in idempotent against duplicate writes.
+export interface GymVisit {
+  userId: string;
+  date: string; // yyyy-MM-dd
+  source: 'geo' | 'manual' | 'qr';
+  firstSeen: Timestamp;
+  lastSeen: Timestamp;
+}
+
+// gamification/{uid}: derived, recomputed on each new day's first visit.
+export interface UserGamification {
+  currentStreakDays: number;
+  longestStreakDays: number;
+  lastVisitDate: string | null; // yyyy-MM-dd
+  monthKey: string; // yyyy-MM
+  visitsThisMonth: number;
+  totalVisits: number;
+  updatedAt?: Timestamp;
+}
+
+export type BadgeId =
+  | 'first_visit' | 'visits_5' | 'visits_25' | 'visits_100'
+  | 'streak_7' | 'streak_30'
+  | 'pr_setter' | 'pr_grinder';
+
+export interface BadgeDefinition {
+  id: BadgeId;
+  name: string;
+  description: string;
+}
+
+// userBadges/{uid}/earned/{badgeId}
+export interface EarnedBadge {
+  id: BadgeId;
+  earnedAt: Timestamp;
+}
+
+// personalRecords/{uid}/records/{recordId}
+export type WeightUnit = 'kg' | 'lb';
+export interface PersonalRecord {
+  id: string;
+  exercise: string;
+  value: number;
+  unit: WeightUnit;
+  date: string; // yyyy-MM-dd
+  createdAt: Timestamp;
+}
+
+// leaderboard/{monthKey}/entries/{uid}: opt-in only
+export interface LeaderboardEntry {
+  id: string; // uid
+  displayName: string;
+  visitsInPeriod: number;
+  streakDays: number;
+  updatedAt?: Timestamp;
+}
