@@ -33,6 +33,15 @@ also delete legacy multi-gym collections from earlier versions of the app:
 npm run seed -- --reset
 ```
 
+## AI Coach
+
+The AI Coach feature (`/app/coach`) calls Google's Gemini API via Genkit. This app
+deploys to Netlify, not Firebase App Hosting, so there's no ambient credential for
+this — set a `GEMINI_API_KEY` environment variable in the Netlify dashboard (Site
+settings → Environment variables) with a key from
+[Google AI Studio](https://aistudio.google.com/apikey). Without it, generating a
+plan will fail with a 500 from `/api/ai/weekly-plan`.
+
 ## Project structure
 
 - `src/app` — Next.js App Router pages (`(auth)` for login/signup, `app` for the

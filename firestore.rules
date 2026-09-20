@@ -140,5 +140,19 @@ service cloud.firestore {
       allow read, list: if isAuth();
       allow write: if isUser(userId) || isAdmin();
     }
+
+    // AI COACH & WORKOUT LOG
+    // The AI flow itself runs server-side (route handler verifies the
+    // caller's ID token before calling Gemini), but the client persists
+    // the returned plan itself - self-write, same as everything above.
+    match /workoutPlans/{userId}/plans/{planId} {
+      allow read, write: if isUser(userId) || isAdmin();
+    }
+    match /workoutLogs/{userId}/logs/{logId} {
+      allow read, write: if isUser(userId) || isAdmin();
+    }
+    match /bodyMetrics/{userId}/entries/{entryId} {
+      allow read, write: if isUser(userId) || isAdmin();
+    }
   }
 }

@@ -166,3 +166,27 @@ export interface LeaderboardEntry {
   streakDays: number;
   updatedAt?: Timestamp;
 }
+
+// workoutLogs/{uid}/logs/{id}: manual first pass. The `source` field is the
+// seam a future native wrapper or OAuth import (Strava/Fitbit) could write
+// through without a schema change - Apple HealthKit / Android Health
+// Connect have no web-reachable API, so this app can't sync them directly.
+export type WorkoutLogSource = 'manual' | 'healthkit' | 'healthconnect' | 'strava';
+export interface WorkoutLog {
+  id: string;
+  date: string; // yyyy-MM-dd
+  type: string;
+  durationMin: number;
+  notes?: string;
+  source: WorkoutLogSource;
+  createdAt: Timestamp;
+}
+
+// bodyMetrics/{uid}/entries/{id}
+export interface BodyMetricEntry {
+  id: string;
+  date: string; // yyyy-MM-dd
+  weightKg: number;
+  source: WorkoutLogSource;
+  createdAt: Timestamp;
+}
