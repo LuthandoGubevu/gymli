@@ -25,6 +25,7 @@ import { AccessPassCard } from "@/components/access-pass-card";
 import { BusiestTimesCard } from "@/components/busiest-times-card";
 import { RankProgressCard } from "@/components/rank-progress-card";
 import { AchievementsCard } from "@/components/achievements-card";
+import { AiCoachCard } from "@/components/ai-coach-card";
 import { usePersonalRecords } from "@/hooks/use-personal-records";
 import { useToast } from "@/hooks/use-toast";
 import { Trophy, PlusCircle, CalendarIcon, Pencil, Trash2 } from "lucide-react";
@@ -149,6 +150,10 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <RankProgressCard />
         <AchievementsCard />
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <AiCoachCard />
       </div>
 
       <Card>
