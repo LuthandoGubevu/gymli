@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -36,6 +37,7 @@ const profileFormSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email(),
   fitnessGoals: z.string().max(200, { message: "Goals can be up to 200 characters." }).optional(),
+  bio: z.string().max(160, { message: "Bio can be up to 160 characters." }).optional(),
 });
 
 export default function ProfilePage() {
@@ -45,6 +47,7 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [isUpdatingLeaderboard, setIsUpdatingLeaderboard] = useState(false);
+  const [isUpdatingBuddyOptIn, setIsUpdatingBuddyOptIn] = useState(false);
   const { gym } = useGym();
 
   const form = useForm<z.infer<typeof profileFormSchema>>({
@@ -55,6 +58,7 @@ export default function ProfilePage() {
       username: "",
       email: "",
       fitnessGoals: "",
+      bio: "",
     },
   });
 
@@ -76,6 +80,7 @@ export default function ProfilePage() {
             username: userData.username || "",
             email: userData.email || user.email || "",
             fitnessGoals: userData.fitnessGoals || "",
+            bio: userData.bio || "",
           });
         }
         setIsFetching(false);
@@ -100,6 +105,7 @@ export default function ProfilePage() {
         lastName: values.lastName,
         username: values.username,
         fitnessGoals: values.fitnessGoals,
+        bio: values.bio,
       });
 
       // Update Firebase Auth profile
@@ -138,6 +144,20 @@ export default function ProfilePage() {
       toast({ variant: "destructive", title: "Update Failed", description: "Could not save your preference." });
     } finally {
       setIsUpdatingLeaderboard(false);
+    }
+  };
+
+  const handleBuddyOptInChange = async (checked: boolean) => {
+    if (!user) return;
+    setIsUpdatingBuddyOptIn(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { buddyOptIn: checked });
+      user.buddyOptIn = checked;
+      toast({ title: "Preference Updated", description: `Gym Buddy has been ${checked ? 'turned on' : 'turned off'}.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Update Failed", description: "Could not save your preference." });
+    } finally {
+      setIsUpdatingBuddyOptIn(false);
     }
   };
 
@@ -238,6 +258,24 @@ export default function ProfilePage() {
                       </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="bio"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Short Bio</FormLabel>
+                      <FormControl>
+                          <Textarea
+                          placeholder="A line about your training style or what you're looking for"
+                          className="resize-none"
+                          {...field}
+                          />
+                      </FormControl>
+                      <FormDescription>Shown on your Gym Buddy card, if you opt in below.</FormDescription>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                />
                 <Button type="submit" className="font-bold" size="lg" disabled={isLoading}>
                 {isLoading ? "Saving..." : "Save Changes"}
                 </Button>
@@ -259,6 +297,23 @@ export default function ProfilePage() {
                         disabled={isUpdatingLeaderboard}
                     />
                     <Label htmlFor="leaderboard-opt-in">Appear on the leaderboard</Label>
+                </div>
+            </CardContent>
+        </Card>
+        <Card className="shadow-lg max-w-2xl">
+            <CardHeader>
+                <CardTitle>Gym Buddy</CardTitle>
+                <CardDescription>Let other members discover and match with you to train together.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center space-x-2">
+                    <Switch
+                        id="buddy-opt-in"
+                        checked={user?.buddyOptIn ?? false}
+                        onCheckedChange={handleBuddyOptInChange}
+                        disabled={isUpdatingBuddyOptIn}
+                    />
+                    <Label htmlFor="buddy-opt-in">Show my profile in Gym Buddy</Label>
                 </div>
             </CardContent>
         </Card>

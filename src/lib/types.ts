@@ -94,7 +94,7 @@ export interface CheckIn {
 export type GymStatsHourly = Record<string, number>;
 
 // users/{uid}/notifications/{id}
-export type NotificationType = 'waitlist_promoted';
+export type NotificationType = 'waitlist_promoted' | 'buddy_match';
 export interface AppNotification {
   id: string;
   type: NotificationType;
@@ -195,4 +195,52 @@ export interface Notice {
   body: string;
   authorName: string;
   createdAt: Timestamp;
+}
+
+// GYM BUDDY MATCHING
+//
+// buddySwipes/{fromUid}_{toUid}: one doc per swipe, deterministic ID makes a
+// duplicate swipe on the same candidate idempotent (an overwrite, not a
+// second doc). A 'like' triggers a check for the reverse doc
+// (toUid_fromUid) - if it also exists and is a 'like', that's a mutual
+// match.
+export type SwipeAction = 'like' | 'pass';
+export interface BuddySwipe {
+  fromUserId: string;
+  toUserId: string;
+  action: SwipeAction;
+  createdAt: Timestamp;
+}
+
+// buddyMatches/{matchId}: matchId is the two uids sorted and joined with
+// '_', so both members can derive it locally without a lookup and a
+// duplicate match can never be created.
+export interface BuddyMatch {
+  id: string;
+  userIds: [string, string];
+  createdAt: Timestamp;
+  lastMessageAt?: Timestamp;
+  lastMessageText?: string;
+}
+
+// buddyMatches/{matchId}/messages/{messageId}
+export interface BuddyMessage {
+  id: string;
+  senderId: string;
+  text: string;
+  createdAt: Timestamp;
+}
+
+// A buddy candidate's public-for-matching profile, assembled from users/{id}
+// plus a one-shot read of their gamification/personalRecords/badges - only
+// ever fetched for users with buddyOptIn: true (see firestore.rules).
+export interface BuddyProfile {
+  uid: string;
+  displayName: string;
+  bio: string;
+  fitnessGoals: string;
+  currentStreakDays: number;
+  totalVisits: number;
+  personalRecords: PersonalRecord[];
+  earnedBadgeIds: BadgeId[];
 }

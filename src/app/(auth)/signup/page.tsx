@@ -22,6 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,6 +35,10 @@ const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string(),
+  fitnessGoals: z.string().max(200, { message: "Goals can be up to 200 characters." }).optional(),
+  bio: z.string().max(160, { message: "Bio can be up to 160 characters." }).optional(),
+  leaderboardOptIn: z.boolean().default(false),
+  buddyOptIn: z.boolean().default(false),
   terms: z.boolean().default(false).refine(val => val === true, {
     message: "You must accept the terms and conditions.",
   }),
@@ -58,6 +63,10 @@ export default function SignupPage() {
       email: "",
       password: "",
       confirmPassword: "",
+      fitnessGoals: "",
+      bio: "",
+      leaderboardOptIn: false,
+      buddyOptIn: false,
       terms: false,
     },
   });
@@ -82,6 +91,10 @@ export default function SignupPage() {
         username: values.username,
         email: values.email,
         role: isAdmin ? "admin" : "user",
+        fitnessGoals: values.fitnessGoals || "",
+        bio: values.bio || "",
+        leaderboardOptIn: values.leaderboardOptIn,
+        buddyOptIn: values.buddyOptIn,
         createdAt: serverTimestamp(),
       });
       
@@ -164,6 +177,64 @@ export default function SignupPage() {
                     <Input placeholder="you@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="fitnessGoals"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fitness Goals</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="e.g., Run a 5k, build muscle, improve flexibility" className="resize-none" {...field} />
+                  </FormControl>
+                  <FormDescription>Shown on your profile and used by the AI coach.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Short Bio</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="A line about your training style or what you're looking for" className="resize-none" {...field} />
+                  </FormControl>
+                  <FormDescription>Shown on your Gym Buddy card, if you opt in below.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="leaderboardOptIn"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Appear on the leaderboard</FormLabel>
+                    <FormDescription>Show your visits and streak on the gym-wide monthly leaderboard.</FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="buddyOptIn"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Find a Gym Buddy</FormLabel>
+                    <FormDescription>Let other members discover and match with you to train together.</FormDescription>
+                  </div>
                 </FormItem>
               )}
             />

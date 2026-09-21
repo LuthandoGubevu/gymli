@@ -15,6 +15,8 @@ interface UserProfile extends User {
   username?: string;
   autoPresenceEnabled?: boolean;
   leaderboardOptIn?: boolean;
+  bio?: string;
+  buddyOptIn?: boolean;
 }
 
 interface AuthContextType {
