@@ -7,9 +7,7 @@ const pwaPlugin = withPWA({
   register: true,
   skipWaiting: true,
   disable: false,
-  fallbacks: {
-    document: '/offline',
-  },
+  dynamicStartUrl: false,
 });
 
 const nextConfig: NextConfig = {
