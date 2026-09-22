@@ -16,16 +16,26 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // A user who has opted in to Gym Buddy is readable by any authenticated
+    // member for matching purposes (profile, personal records, badges,
+    // streak) - opting in is exactly the consent this widens on.
+    function isBuddyVisible(userId) {
+      return isAuth() && exists(/databases/$(database)/documents/users/$(userId))
+        && get(/databases/$(database)/documents/users/$(userId)).data.buddyOptIn == true;
+    }
+
     // USERS
     // Users can read/update their own profile, but never change their own
-    // role via a client write. Admins can read/manage any profile.
+    // role via a client write. Admins can read/manage any profile. A
+    // Gym-Buddy-opted-in user's profile is also readable by any member, for
+    // discovery (see isBuddyVisible above).
     match /users/{userId} {
-      allow read: if isUser(userId) || isAdmin();
+      allow read, list: if isUser(userId) || isAdmin() || (isAuth() && resource.data.buddyOptIn == true);
       allow update: if isAdmin() || (
         isUser(userId) &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
       );
-      allow list, create, delete: if isAdmin();
+      allow create, delete: if isAdmin();
     }
 
     // GYM (single fixed branch)
@@ -125,14 +135,15 @@ service cloud.firestore {
       allow update: if isAuth() && resource.data.userId == request.auth.uid;
     }
     match /gamification/{userId} {
-      allow read: if isUser(userId) || isAdmin();
+      allow read: if isUser(userId) || isAdmin() || isBuddyVisible(userId);
       allow write: if isUser(userId);
     }
     match /personalRecords/{userId}/records/{recordId} {
-      allow read, write: if isUser(userId) || isAdmin();
+      allow read: if isUser(userId) || isAdmin() || isBuddyVisible(userId);
+      allow write: if isUser(userId) || isAdmin();
     }
     match /userBadges/{userId}/earned/{badgeId} {
-      allow read: if isUser(userId) || isAdmin();
+      allow read: if isUser(userId) || isAdmin() || isBuddyVisible(userId);
       allow write: if isUser(userId);
     }
     match /leaderboard/{monthKey}/entries/{userId} {
@@ -158,6 +169,37 @@ service cloud.firestore {
     match /notices/{noticeId} {
       allow read, list: if isAuth();
       allow write: if isAdmin();
+    }
+
+    // GYM BUDDY MATCHING
+    // Swipe doc ID is deterministic ({fromUid}_{toUid}), so a duplicate
+    // swipe is an overwrite of the same doc, not a race. A user can only
+    // create a swipe recording their own action, and can read/list only
+    // swipes where they're the sender or the recipient (recipient access
+    // lets a client detect a mutual like from the other side).
+    match /buddySwipes/{swipeId} {
+      allow read, list: if isAuth() &&
+        (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid);
+      allow create, update: if isAuth() && request.resource.data.fromUserId == request.auth.uid
+        && swipeId == request.resource.data.fromUserId + '_' + request.resource.data.toUserId;
+    }
+
+    // matchId is the two uids sorted and joined with '_' (see getMatchId in
+    // src/lib/buddy.ts), created client-side by whichever member's swipe
+    // completes the mutual like - no server component to arbitrate this,
+    // same trust level as gymStats/classSlots elsewhere in this app.
+    match /buddyMatches/{matchId} {
+      allow read, list: if isAuth() && request.auth.uid in resource.data.userIds;
+      allow create: if isAuth() && request.auth.uid in request.resource.data.userIds
+        && request.resource.data.userIds.size() == 2;
+      allow update: if isAuth() && request.auth.uid in resource.data.userIds;
+
+      match /messages/{messageId} {
+        allow read, list: if isAuth()
+          && request.auth.uid in get(/databases/$(database)/documents/buddyMatches/$(matchId)).data.userIds;
+        allow create: if isAuth() && request.resource.data.senderId == request.auth.uid
+          && request.auth.uid in get(/databases/$(database)/documents/buddyMatches/$(matchId)).data.userIds;
+      }
     }
   }
 }

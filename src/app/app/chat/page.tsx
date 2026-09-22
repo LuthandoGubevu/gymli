@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef, FormEvent } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
@@ -10,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Send, Megaphone } from 'lucide-react';
+import { Send, Megaphone, Heart } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -97,8 +98,14 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-[calc(100vh-theme(spacing.24))] flex-col">
-       <div className="mb-4">
+       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold md:text-3xl mt-2">Gymli Group Chat</h1>
+        <Button asChild variant="outline" className="shrink-0">
+          <Link href="/app/buddy">
+            <Heart className="mr-2 size-4 text-primary" />
+            Meet a Gym Buddy
+          </Link>
+        </Button>
       </div>
 
       <Card className="flex flex-1 flex-col shadow-lg">
