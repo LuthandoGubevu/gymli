@@ -4,7 +4,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo, FormEvent } from "react";
-import { collection, query, onSnapshot, doc, updateDoc, Timestamp, deleteDoc, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, updateDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { AdminDashboardOverview } from "@/components/admin-dashboard-overview";
@@ -22,19 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ShieldCheck, CalendarCheck, UserCheck, MessageSquare, Loader2, BarChart2, Trash2, Megaphone, Send, Building2, Dumbbell } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ShieldCheck, CalendarCheck, UserCheck, Loader2, BarChart2, Megaphone, Building2, Dumbbell } from "lucide-react";
 
 
 type BookingStatus = 'pending' | 'accepted' | 'declined';
@@ -83,17 +71,6 @@ interface TrainerBooking {
 }
 
 // Interface for Chat Messages
-interface Message {
-  id: string;
-  sender: {
-    id: string;
-    name: string;
-  };
-  text: string;
-  timestamp: Timestamp | null;
-  isAnnouncement?: boolean;
-}
-
 const statusVariantMap: Record<BookingStatus, "default" | "secondary" | "destructive"> = {
   pending: "default",
   accepted: "secondary",
@@ -344,172 +321,6 @@ function TrainerBookingsManager() {
     );
 }
 
-// Chat Moderation Manager Component
-function ChatModerationManager() {
-    const { user } = useAuth();
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [announcement, setAnnouncement] = useState("");
-    const [isPosting, setIsPosting] = useState(false);
-    const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
-    const [isAlertOpen, setIsAlertOpen] = useState(false);
-    const { toast } = useToast();
-
-    const formatTimestamp = (timestamp: Timestamp | null) => {
-        if (!timestamp) return 'Sending...';
-        return new Date(timestamp.seconds * 1000).toLocaleString();
-    };
-
-    useEffect(() => {
-        if (!user || user.role !== 'admin') {
-            setMessages([]);
-            setIsLoading(false);
-            return;
-        }
-
-        setIsLoading(true);
-        const messagesColRef = collection(db, 'chatMessages');
-        const q = query(messagesColRef, orderBy('timestamp', 'desc'));
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedMessages = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as Message));
-            setMessages(fetchedMessages);
-            setIsLoading(false);
-        }, (error) => {
-            console.error("Error fetching messages: ", error);
-            toast({ variant: "destructive", title: "Error", description: "Could not fetch messages." });
-            setIsLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [toast, user]);
-
-    const handlePostAnnouncement = async (e: FormEvent) => {
-        e.preventDefault();
-        if (announcement.trim() === '') return;
-
-        setIsPosting(true);
-        const messagesColRef = collection(db, 'chatMessages');
-        try {
-            await addDoc(messagesColRef, {
-                text: announcement,
-                sender: { id: 'admin', name: 'Gymli Admin' },
-                timestamp: serverTimestamp(),
-                isAnnouncement: true,
-            });
-            setAnnouncement('');
-            toast({ title: "Success", description: "Announcement posted." });
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Send Error', description: 'Could not post announcement.' });
-        } finally {
-            setIsPosting(false);
-        }
-    };
-
-    const handleDeleteMessage = async () => {
-        if (!messageToDelete) return;
-
-        try {
-            await deleteDoc(doc(db, 'chatMessages', messageToDelete.id));
-            toast({ title: "Success", description: "Message deleted." });
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Failed to delete message." });
-        } finally {
-            setMessageToDelete(null);
-            setIsAlertOpen(false);
-        }
-    };
-    
-    const openDeleteDialog = (message: Message) => {
-        setMessageToDelete(message);
-        setIsAlertOpen(true);
-    };
-    
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><MessageSquare/>Group Chat Moderation</CardTitle>
-          <CardDescription>View messages, delete content, and post announcements.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-            <form onSubmit={handlePostAnnouncement} className="space-y-2">
-                <label htmlFor="announcement-input" className="text-sm font-medium">Post an Announcement</label>
-                <div className="flex gap-2">
-                    <Textarea
-                        id="announcement-input"
-                        value={announcement}
-                        onChange={(e) => setAnnouncement(e.target.value)}
-                        placeholder="Type your announcement here..."
-                        className="flex-1"
-                        disabled={isPosting}
-                    />
-                    <Button type="submit" size="icon" disabled={isPosting || announcement.trim() === ''}>
-                        {isPosting ? <Loader2 className="animate-spin" /> : <Send />}
-                    </Button>
-                </div>
-            </form>
-
-            <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Live Chat Feed</h3>
-                <div className="h-[500px] overflow-y-auto rounded-md border p-4 space-y-4 bg-muted/20">
-                    {isLoading ? (
-                        <div className="flex justify-center items-center h-full">
-                            <Loader2 className="animate-spin text-primary" />
-                        </div>
-                    ) : messages.length > 0 ? (
-                        messages.map(msg => (
-                            <div key={msg.id} className={cn(
-                                "flex items-start gap-3 p-3 rounded-lg shadow-sm",
-                                msg.isAnnouncement ? "bg-primary/10 border border-primary/20" : "bg-background"
-                            )}>
-                                <Avatar>
-                                    <AvatarFallback>{msg.isAnnouncement ? 'A' : msg.sender.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-center">
-                                        <p className="font-bold text-sm">{msg.sender.name} {msg.isAnnouncement && <Megaphone className="inline-block ml-2 text-primary size-4"/>}</p>
-                                        <span className="text-xs text-muted-foreground">{formatTimestamp(msg.timestamp)}</span>
-                                    </div>
-                                    <p className="text-sm mt-1">{msg.text}</p>
-                                </div>
-                                {!msg.isAnnouncement && (
-                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive shrink-0" onClick={() => openDeleteDialog(msg)}>
-                                        <Trash2 className="size-4" />
-                                    </Button>
-                                )}
-                            </div>
-                        ))
-                    ) : (
-                        <div className="flex justify-center items-center h-full">
-                            <p className="text-muted-foreground">No messages in this chat yet.</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </CardContent>
-
-        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the message.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteMessage} className="bg-destructive hover:bg-destructive/80 text-destructive-foreground">Delete</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-      </Card>
-    );
-}
-
-
 // Main Admin Page Component
 export default function AdminPage() {
     const { user, loading } = useAuth();
@@ -522,7 +333,6 @@ export default function AdminPage() {
       { id: 'notices', label: 'Notices', icon: Megaphone, badge: 0 },
       { id: 'class-bookings', label: 'Classes', icon: CalendarCheck, badge: pendingClassBookings },
       { id: 'trainer-bookings', label: 'Trainers', icon: UserCheck, badge: pendingTrainerBookings },
-      { id: 'chat-moderation', label: 'Chat', icon: MessageSquare, badge: 0 },
       { id: 'manage-classes', label: 'Manage Classes', icon: Dumbbell, badge: 0 },
       { id: 'gym-settings', label: 'Gym', icon: Building2, badge: 0 },
     ];
@@ -572,10 +382,6 @@ export default function AdminPage() {
                     Trainer Bookings
                     {pendingTrainerBookings > 0 && <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">{pendingTrainerBookings}</Badge>}
                 </TabsTrigger>
-                <TabsTrigger value="chat-moderation">
-                    <MessageSquare className="mr-2 size-4"/>
-                    Chat Moderation
-                </TabsTrigger>
                 <TabsTrigger value="manage-classes">
                     <Dumbbell className="mr-2 size-4"/>
                     Manage Classes
@@ -596,9 +402,6 @@ export default function AdminPage() {
               </TabsContent>
               <TabsContent value="trainer-bookings" className="mt-4">
                  <TrainerBookingsManager />
-              </TabsContent>
-              <TabsContent value="chat-moderation" className="mt-4">
-                 <ChatModerationManager />
               </TabsContent>
               <TabsContent value="manage-classes" className="mt-4">
                  <ManageClassesForm />
