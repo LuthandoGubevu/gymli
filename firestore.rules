@@ -109,12 +109,6 @@ service cloud.firestore {
       allow list, delete: if isAdmin();
     }
 
-    // GROUP CHAT (single fixed branch)
-    match /chatMessages/{messageId} {
-      allow read, list, create: if isAuth();
-      allow delete: if isAdmin();
-    }
-
     // NOTIFICATIONS (e.g. waitlist promotion)
     // Created by whichever client triggers the event (may be a different
     // user, e.g. the member who cancels and frees a waitlist spot).
