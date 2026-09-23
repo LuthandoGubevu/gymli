@@ -129,15 +129,38 @@ export const reducer = (state: State, action: Action): State => {
   }
 }
 
-const listeners: Array<(state: State) => void> = []
+const listeners: Array<() => void> = []
 
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action)
-  listeners.forEach((listener) => {
-    listener(memoryState)
-  })
+  listeners.forEach((listener) => listener())
+}
+
+function subscribe(listener: () => void) {
+  listeners.push(listener)
+  return () => {
+    const index = listeners.indexOf(listener)
+    if (index > -1) listeners.splice(index, 1)
+  }
+}
+
+function getSnapshot() {
+  return memoryState
+}
+
+// The initial toast state must be identical on the server and on the
+// browser's first render, or React flags a hydration mismatch (this store
+// is read by <Toaster />, mounted on every page via the root layout).
+// getServerSnapshot pins that first render to a fixed empty state instead
+// of whatever the module-level memoryState singleton happens to hold.
+// It must return a referentially stable value - a fresh object literal on
+// every call makes useSyncExternalStore think the store never stops
+// changing.
+const serverSnapshot: State = { toasts: [] }
+function getServerSnapshot(): State {
+  return serverSnapshot
 }
 
 type Toast = Omit<ToasterToast, "id">
@@ -172,17 +195,7 @@ function toast({ ...props }: Toast) {
 }
 
 function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
-
-  React.useEffect(() => {
-    listeners.push(setState)
-    return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
-      }
-    }
-  }, [state])
+  const state = React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
   return {
     ...state,

@@ -35,14 +35,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setUser({ ...firebaseUser, ...userData });
-        } else {
-          // This case handles users who signed up before the new fields were added
-          // or if the doc creation failed.
+        try {
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUser({ ...firebaseUser, ...userData });
+          } else {
+            // This case handles users who signed up before the new fields were added
+            // or if the doc creation failed.
+            setUser(firebaseUser);
+          }
+        } catch (error) {
+          // A Firestore read failure (offline, permission error, etc.) must
+          // not leave the app stuck on the loading spinner forever - fall
+          // back to the bare Firebase Auth user, same as a missing doc.
+          console.error('Failed to load user profile:', error);
           setUser(firebaseUser);
         }
       } else {
